@@ -1323,6 +1323,15 @@ mcp-skills test-connection          # Test MCP connection
 
 ---
 
+## Related Documentation
+
+- **[Skills Repository Resources](../skills/RESOURCES.md)** - Comprehensive index of skill repositories compatible with mcp-skills
+- **[Skills Research](../research/skills-research.md)** - Detailed research on 69+ skills and repositories
+- **[README](../../README.md)** - Quick start guide and installation instructions
+- **[CONTRIBUTING](../../CONTRIBUTING.md)** - Development workflow and contribution guidelines
+
+---
+
 **Status**: Ready for implementation
 **Estimated Timeline**: 6 weeks to production-ready v1.0
 **Dependencies**: Minimal - all open source components

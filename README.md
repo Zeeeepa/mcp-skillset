@@ -196,9 +196,18 @@ make quality
 make lint-fix
 ```
 
-## Architecture Documentation
+## Documentation
 
+### Architecture
 See [docs/architecture/README.md](docs/architecture/README.md) for detailed architecture design.
+
+### Skills Collections
+See [docs/skills/RESOURCES.md](docs/skills/RESOURCES.md) for a comprehensive index of skill repositories compatible with mcp-skills, including:
+- Official Anthropic skills
+- Community collections (obra/superpowers, claude-mpm-skills, etc.)
+- Toolchain-specific skills (Python, TypeScript, Rust, Go, Java)
+- Operations & DevOps skills
+- MCP servers that provide skill-like capabilities
 
 ## Contributing
 
