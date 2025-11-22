@@ -141,3 +141,7 @@ yarn-error.log*
 # Gemini CLI
 .gemini/
 .claude/mcp.local.json
+
+# Claude MPM agent definitions and configuration
+.claude-mpm/
+.claude/agents/
