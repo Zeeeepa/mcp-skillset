@@ -1,75 +1,20 @@
 """Git repository management for skills repositories."""
 
-import json
 import logging
-import os
 import re
 import shutil
-import tempfile
-from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 from urllib.parse import urlparse
 
 import git
 
+from mcp_skills.models.repository import Repository
+from mcp_skills.services.metadata_store import MetadataStore
+
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Repository:
-    """Repository metadata.
-
-    Attributes:
-        id: Unique repository identifier
-        url: Git repository URL
-        local_path: Path to local clone
-        priority: Priority for skill selection (higher = preferred)
-        last_updated: Timestamp of last update
-        skill_count: Number of skills in repository
-        license: Repository license (MIT, Apache-2.0, etc.)
-    """
-
-    id: str
-    url: str
-    local_path: Path
-    priority: int
-    last_updated: datetime
-    skill_count: int
-    license: str
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert Repository to dictionary for JSON serialization.
-
-        Returns:
-            Dictionary with all fields, Path and datetime converted to strings
-        """
-        data = asdict(self)
-        data["local_path"] = str(self.local_path)
-        data["last_updated"] = self.last_updated.isoformat()
-        return data
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Repository":
-        """Create Repository from dictionary loaded from JSON.
-
-        Args:
-            data: Dictionary with repository fields
-
-        Returns:
-            Repository instance
-        """
-        return cls(
-            id=data["id"],
-            url=data["url"],
-            local_path=Path(data["local_path"]),
-            priority=data["priority"],
-            last_updated=datetime.fromisoformat(data["last_updated"]),
-            skill_count=data["skill_count"],
-            license=data["license"],
-        )
 
 
 class RepositoryManager:
@@ -104,10 +49,29 @@ class RepositoryManager:
         Args:
             base_dir: Base directory for storing repositories.
                      Defaults to ~/.mcp-skills/repos/
+
+        Migration Note:
+        - Automatically migrates from JSON to SQLite on first use
+        - JSON file backed up as repos.json.backup after successful migration
+        - SQLite database provides O(1) indexed lookups vs O(n) JSON scans
         """
         self.base_dir = base_dir or Path.home() / ".mcp-skills" / "repos"
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.metadata_file = self.base_dir.parent / "repos.json"
+
+        # Initialize SQLite metadata store
+        db_path = self.base_dir.parent / "metadata.db"
+        self.metadata_store = MetadataStore(db_path=db_path)
+
+        # Auto-migrate from JSON if needed
+        if self.metadata_file.exists() and not self.metadata_store.has_data():
+            count = self.metadata_store.migrate_from_json(self.metadata_file)
+            if count > 0:
+                logger.info(f"Migrated {count} repositories from JSON to SQLite")
+                # Backup JSON file after successful migration
+                backup_path = self.metadata_file.with_suffix(".json.backup")
+                shutil.move(str(self.metadata_file), str(backup_path))
+                logger.info(f"JSON metadata backed up to {backup_path}")
 
     def add_repository(
         self, url: str, priority: int = 0, license: str = "Unknown"
@@ -183,8 +147,8 @@ class RepositoryManager:
             license=license,
         )
 
-        # 8. Store metadata
-        self._save_repository(repository)
+        # 8. Store metadata in SQLite
+        self.metadata_store.add_repository(repository)
 
         return repository
 
@@ -238,8 +202,8 @@ class RepositoryManager:
         repository.last_updated = datetime.now(timezone.utc)
         repository.skill_count = skill_count
 
-        # 5. Save updated metadata
-        self._update_repository_metadata(repository)
+        # 5. Save updated metadata to SQLite
+        self.metadata_store.update_repository(repository)
 
         return repository
 
@@ -250,21 +214,14 @@ class RepositoryManager:
             List of Repository objects sorted by priority (highest first)
 
         Performance Note:
-        - Time Complexity: O(n log n) due to sorting
+        - Time Complexity: O(n log n) due to ORDER BY in SQL
         - Space Complexity: O(n) for loading all repositories
+        - Uses idx_repos_priority index for optimized sorting
 
-        For current scale (~3-10 repos), this is negligible. If repository count
-        exceeds 100, consider:
-        - Lazy loading with pagination
-        - Maintaining sorted index in JSON
-        - Moving to SQLite with indexed queries (planned for Phase 1 Task 7)
+        SQLite automatically uses the priority index for efficient sorting
+        without requiring full table scan.
         """
-        repositories = self._load_all_repositories()
-
-        # Sort by priority descending (highest priority first)
-        repositories.sort(key=lambda r: r.priority, reverse=True)
-
-        return repositories
+        return self.metadata_store.list_repositories()
 
     def remove_repository(self, repo_id: str) -> None:
         """Remove repository and its skills.
@@ -307,10 +264,10 @@ class RepositoryManager:
                 f"Failed to delete repository directory {repository.local_path}: {e}"
             ) from e
 
-        # 3. Remove from metadata storage
+        # 3. Remove from metadata storage (SQLite with CASCADE deletes skills)
         # Note: Skill index removal will be handled by SkillManager (Task 4)
         # and ChromaDB integration (Task 5) in later phases
-        self._delete_repository_metadata(repo_id)
+        self.metadata_store.delete_repository(repo_id)
 
     def get_repository(self, repo_id: str) -> Optional[Repository]:
         """Get repository by ID.
@@ -322,20 +279,10 @@ class RepositoryManager:
             Repository object or None if not found
 
         Performance:
-        - Time Complexity: O(n) linear scan of all repositories
-        - For current scale (3-10 repos), this is <1ms
-
-        Optimization Opportunity:
-        - If repo count >100, consider in-memory dict cache
-        - SQLite migration (Task 7) will provide O(1) indexed lookup
+        - Time Complexity: O(1) via SQLite primary key index
+        - Direct lookup without table scan
         """
-        repositories = self._load_all_repositories()
-
-        for repo in repositories:
-            if repo.id == repo_id:
-                return repo
-
-        return None
+        return self.metadata_store.get_repository(repo_id)
 
     # Private helper methods
 
@@ -445,128 +392,3 @@ class RepositoryManager:
         """
         skill_files = list(repo_path.rglob("SKILL.md"))
         return len(skill_files)
-
-    def _load_all_repositories(self) -> list[Repository]:
-        """Load all repositories from JSON metadata file.
-
-        Returns:
-            List of Repository objects (empty list if file doesn't exist)
-
-        Error Handling:
-        - Missing file: Returns empty list (no repositories configured)
-        - Corrupt JSON: Logs error and returns empty list
-        - Invalid data: Logs error and skips malformed entries
-        """
-        if not self.metadata_file.exists():
-            return []
-
-        try:
-            with open(self.metadata_file, "r") as f:
-                data = json.load(f)
-                repositories = []
-
-                for repo_data in data.get("repositories", []):
-                    try:
-                        repo = Repository.from_dict(repo_data)
-                        repositories.append(repo)
-                    except (KeyError, ValueError) as e:
-                        logger.warning(f"Skipping malformed repository entry: {e}")
-
-                return repositories
-
-        except (json.JSONDecodeError, OSError) as e:
-            logger.error(f"Failed to load repository metadata: {e}")
-            return []
-
-    def _save_repository(self, repository: Repository) -> None:
-        """Save new repository to metadata file.
-
-        Args:
-            repository: Repository to add to metadata
-
-        Design Decision: Atomic File Updates
-
-        Rationale: Use temp file + rename for atomic updates to prevent corruption
-        if process crashes during write. POSIX rename() is atomic, ensuring
-        metadata is never in half-written state.
-
-        Trade-offs:
-        - Safety: Prevents corruption at cost of extra disk I/O
-        - Performance: Negligible for small files (<100KB)
-        - Complexity: Requires temp file handling
-
-        Error Handling:
-        - Write errors: Temp file is not renamed, original preserved
-        - Rename errors: Rare, but original file remains unchanged
-        """
-        repositories = self._load_all_repositories()
-        repositories.append(repository)
-        self._write_metadata(repositories)
-
-    def _update_repository_metadata(self, repository: Repository) -> None:
-        """Update existing repository in metadata file.
-
-        Args:
-            repository: Repository with updated metadata
-
-        Note: This replaces the repository entry with matching ID
-        """
-        repositories = self._load_all_repositories()
-
-        # Replace repository with matching ID
-        for i, repo in enumerate(repositories):
-            if repo.id == repository.id:
-                repositories[i] = repository
-                break
-
-        self._write_metadata(repositories)
-
-    def _delete_repository_metadata(self, repo_id: str) -> None:
-        """Remove repository from metadata file.
-
-        Args:
-            repo_id: ID of repository to remove
-        """
-        repositories = self._load_all_repositories()
-
-        # Filter out repository with matching ID
-        repositories = [repo for repo in repositories if repo.id != repo_id]
-
-        self._write_metadata(repositories)
-
-    def _write_metadata(self, repositories: list[Repository]) -> None:
-        """Write repository list to metadata file atomically.
-
-        Args:
-            repositories: List of all repositories to persist
-
-        Atomic Write Strategy:
-        1. Write to temporary file in same directory
-        2. Rename temp file over original (atomic operation on POSIX)
-        3. This ensures metadata is never corrupted by partial writes
-        """
-        # Ensure parent directory exists
-        self.metadata_file.parent.mkdir(parents=True, exist_ok=True)
-
-        # Convert repositories to dict format
-        data = {"repositories": [repo.to_dict() for repo in repositories]}
-
-        # Write to temp file, then atomic rename
-        temp_fd, temp_path = tempfile.mkstemp(
-            dir=self.metadata_file.parent, prefix=".repos_", suffix=".json.tmp"
-        )
-
-        try:
-            with os.fdopen(temp_fd, "w") as f:
-                json.dump(data, f, indent=2)
-
-            # Atomic rename (POSIX guarantees atomicity)
-            os.replace(temp_path, self.metadata_file)
-
-        except Exception:
-            # Clean up temp file on error
-            try:
-                os.unlink(temp_path)
-            except OSError:
-                pass
-            raise
