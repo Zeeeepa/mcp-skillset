@@ -19,7 +19,7 @@ This directory contains comprehensive end-to-end tests for the mcp-skillkit proj
      - `mcp-skillkit recommend`
      - `mcp-skillkit repo add/list/update`
      - `mcp-skillkit index`
-     - `mcp-skillkit health`
+     - `mcp-skillkit doctor`
      - `mcp-skillkit stats`
      - `mcp-skillkit config`
 

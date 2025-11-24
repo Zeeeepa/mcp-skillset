@@ -50,7 +50,7 @@ All 11 CLI commands tested with real invocations:
 #### Indexing & Maintenance Commands (5 tests)
 - ✅ `mcp-skillkit index` - Build indices
 - ✅ `mcp-skillkit index --force` - Force rebuild
-- ✅ `mcp-skillkit health` - System health check
+- ✅ `mcp-skillkit doctor` - System health check
 - ✅ `mcp-skillkit stats` - Usage statistics
 - ✅ `mcp-skillkit config` - Configuration display
 

@@ -643,9 +643,16 @@ def recommend(search_mode: str | None) -> None:
         raise SystemExit(1)
 
 
-@cli.command()
-def health() -> None:
-    """Check system health and status."""
+@cli.command(name="doctor")
+def doctor() -> None:
+    """Check system health and status.
+
+    Diagnoses the health of your MCP Skills installation, including:
+    - ChromaDB vector store connectivity
+    - Knowledge graph status
+    - Repository configuration
+    - Skill index status
+    """
     console.print("🏥 [bold]System Health Check[/bold]\n")
 
     all_healthy = True
@@ -757,6 +764,13 @@ def health() -> None:
         console.print(f"\n[red]Health check failed: {e}[/red]")
         logger.exception("Health check failed")
         raise SystemExit(1)
+
+
+@cli.command(name="health", hidden=True)
+def health() -> None:
+    """Check system health and status (deprecated: use 'doctor' instead)."""
+    console.print("[yellow]Warning: 'health' is deprecated, use 'doctor' instead[/yellow]\n")
+    doctor.callback()  # Invoke the doctor command
 
 
 @cli.command()

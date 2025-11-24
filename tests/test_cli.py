@@ -58,12 +58,21 @@ class TestCLI:
         assert result.exit_code == 0
         assert "Available Skills" in result.output
 
-    def test_health_command(self) -> None:
-        """Test health command runs."""
+    def test_doctor_command(self) -> None:
+        """Test doctor command runs."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["doctor"])
+
+        assert result.exit_code == 0
+        assert "Health Check" in result.output
+
+    def test_health_command_deprecated(self) -> None:
+        """Test health command still works but shows deprecation warning."""
         runner = CliRunner()
         result = runner.invoke(cli, ["health"])
 
         assert result.exit_code == 0
+        assert "deprecated" in result.output.lower()
         assert "Health Check" in result.output
 
     def test_repo_list_command(self) -> None:

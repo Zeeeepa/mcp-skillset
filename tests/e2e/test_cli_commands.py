@@ -12,7 +12,7 @@ Commands Tested:
 - mcp-skillkit recommend
 - mcp-skillkit repo add/list/update
 - mcp-skillkit index
-- mcp-skillkit health
+- mcp-skillkit doctor
 - mcp-skillkit stats
 - mcp-skillkit config
 """
@@ -440,16 +440,16 @@ class TestCLIIndexCommand:
 
 
 @pytest.mark.e2e
-class TestCLIHealthCommand:
-    """Test 'mcp-skillkit health' command."""
+class TestCLIDoctorCommand:
+    """Test 'mcp-skillkit doctor' command."""
 
-    def test_health_check(
+    def test_doctor_check(
         self,
         cli_runner: CliRunner,
         e2e_services_with_repo: tuple,
         monkeypatch,
     ) -> None:
-        """Test health command checks system status."""
+        """Test doctor command checks system status."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
         from mcp_skills.cli import main
@@ -458,7 +458,7 @@ class TestCLIHealthCommand:
         monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
         monkeypatch.setattr(main, "RepositoryManager", lambda **kwargs: repo_manager)
 
-        result = cli_runner.invoke(cli, ["health"])
+        result = cli_runner.invoke(cli, ["doctor"])
 
         assert result.exit_code == 0
         assert "System Health Check" in result.output

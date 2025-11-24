@@ -1194,7 +1194,7 @@ logger.info("Loaded skill", extra={
 ### Health Checks
 ```bash
 # Server health
-mcp-skillkit health
+mcp-skillkit doctor
 
 # Output:
 # ✓ Vector store: OK (75 skills)
@@ -1275,7 +1275,7 @@ mcp-skillkit index                    # Rebuild indices
 mcp-skillkit index --incremental      # Index only new/changed skills
 
 # Utilities
-mcp-skillkit health                   # Health check
+mcp-skillkit doctor                   # System health check
 mcp-skillkit stats                    # Usage statistics
 mcp-skillkit validate <skill-path>    # Validate skill
 mcp-skillkit config                   # Show configuration

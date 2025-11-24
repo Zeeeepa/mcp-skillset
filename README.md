@@ -270,7 +270,7 @@ mcp-skillkit index                    # Rebuild indices
 mcp-skillkit index --incremental      # Index only new skills
 
 # Utilities
-mcp-skillkit health                   # Health check
+mcp-skillkit doctor                   # System health check
 mcp-skillkit stats                    # Usage statistics
 ```
 
@@ -560,7 +560,7 @@ For environments without internet access:
 
 4. Verify the setup:
    ```bash
-   mcp-skillkit health
+   mcp-skillkit doctor
    ```
 
 #### 5. Custom Cache Location
@@ -615,7 +615,7 @@ chmod 755 ~/.cache/huggingface
 If you encounter issues not covered here:
 1. Check [GitHub Issues](https://github.com/bobmatnyc/mcp-skillkit/issues)
 2. Review logs: `~/.mcp-skillkit/logs/`
-3. Run health check: `mcp-skillkit health`
+3. Run health check: `mcp-skillkit doctor`
 4. Open a new issue with:
    - Error message and stack trace
    - Output of `mcp-skillkit --version`
