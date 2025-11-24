@@ -67,6 +67,26 @@ test: ## Run tests with coverage
 	pytest $(TEST_DIR) --cov=$(SRC_DIR) --cov-report=term-missing --cov-report=html
 	@echo "$(GREEN)✅ Tests complete$(NC)"
 
+.PHONY: benchmark
+benchmark: ## Run performance benchmarks
+	@echo "$(BLUE)⚡ Running performance benchmarks...$(NC)"
+	pytest tests/benchmarks/ -v --benchmark-only --benchmark-autosave --benchmark-storage=.benchmarks
+	@echo "$(GREEN)✅ Benchmarks complete$(NC)"
+	@echo ""
+	@echo "$(BLUE)📊 Benchmark results saved to .benchmarks/$(NC)"
+
+.PHONY: benchmark-compare
+benchmark-compare: ## Compare latest benchmark with baseline
+	@echo "$(BLUE)📊 Comparing benchmarks...$(NC)"
+	pytest tests/benchmarks/ --benchmark-only --benchmark-compare --benchmark-storage=.benchmarks
+	@echo "$(GREEN)✅ Comparison complete$(NC)"
+
+.PHONY: benchmark-fast
+benchmark-fast: ## Run fast benchmarks only (skip slow tests)
+	@echo "$(BLUE)⚡ Running fast benchmarks...$(NC)"
+	pytest tests/benchmarks/ -v -m "not slow" --benchmark-only --benchmark-autosave --benchmark-storage=.benchmarks
+	@echo "$(GREEN)✅ Fast benchmarks complete$(NC)"
+
 .PHONY: quality
 quality: ## Run comprehensive quality checks
 	@echo "$(BLUE)📊 Running comprehensive quality checks...$(NC)"
