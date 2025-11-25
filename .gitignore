@@ -64,13 +64,13 @@ dmypy.json
 .secrets.baseline
 *.log
 
-# MCP SkillKit specific
-.mcp-skillkit.yaml
+# MCP Skillset specific
+.mcp-skillset.yaml
 
-# MCP SkillKit datasets (ChromaDB, vector stores in ~/.mcp-skillkit/)
+# MCP Skillset datasets (ChromaDB, vector stores in ~/.mcp-skillset/)
 # Note: These are user-specific data files that should never be committed
-.mcp-skillkit/
-**/.mcp-skillkit/
+.mcp-skillset/
+**/.mcp-skillset/
 
 # Added by Claude MPM /mpm-init
 $RECYCLE.BIN/
