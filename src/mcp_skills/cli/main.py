@@ -1940,7 +1940,9 @@ def discover_search(query: str, min_stars: int, limit: int) -> None:
             console.print("\nTry:")
             console.print("  • Using different keywords")
             console.print("  • Lowering --min-stars threshold")
-            console.print("  • Checking GitHub rate limits: mcp-skillset discover limits")
+            console.print(
+                "  • Checking GitHub rate limits: mcp-skillset discover limits"
+            )
             return
 
         # Display results
@@ -2003,7 +2005,7 @@ def discover_trending(timeframe: str, topic: str | None, limit: int) -> None:
         mcp-skillset discover trending --timeframe month
         mcp-skillset discover trending --topic claude-skills
     """
-    console.print(f"📈 [bold]Trending Repositories[/bold]")
+    console.print("📈 [bold]Trending Repositories[/bold]")
     console.print(f"📅 [dim]Timeframe: {timeframe}[/dim]")
     if topic:
         console.print(f"🏷️  [dim]Topic: {topic}[/dim]")
@@ -2221,7 +2223,9 @@ def discover_limits() -> None:
             console.print("[green]✓[/green] Authenticated (5000 requests/hour)")
         else:
             console.print("[yellow]⚠[/yellow] Unauthenticated (60 requests/hour)")
-            console.print("[dim]Set GITHUB_TOKEN environment variable for higher limits[/dim]\n")
+            console.print(
+                "[dim]Set GITHUB_TOKEN environment variable for higher limits[/dim]\n"
+            )
 
         # Display limits
         table = Table(title="Rate Limit Status")

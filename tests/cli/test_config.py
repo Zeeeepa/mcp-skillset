@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from mcp_skills.cli.main import cli
+
 
 if TYPE_CHECKING:
     from mcp_skills.models.config import MCPSkillsConfig
@@ -130,7 +130,7 @@ class TestConfigCommand:
         mock_menu_cls.return_value = mock_menu
 
         # Run command (no flags = interactive)
-        result = cli_runner.invoke(cli, ["config"], input="\n")
+        cli_runner.invoke(cli, ["config"], input="\n")
 
         # Verify interactive menu was invoked
         mock_menu_cls.assert_called_once()
@@ -189,7 +189,9 @@ class TestConfigCommand:
 
         # Verify repositories are shown
         assert result.exit_code == 0
-        assert "Repositories" in result.output or "repositories" in result.output.lower()
+        assert (
+            "Repositories" in result.output or "repositories" in result.output.lower()
+        )
 
     @patch("mcp_skills.cli.main.MCPSkillsConfig")
     def test_config_show_with_search_settings(

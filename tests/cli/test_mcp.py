@@ -21,7 +21,9 @@ class TestMCPCommand:
         assert "Start the MCP server" in result.output
         assert "--dev" in result.output
 
-    @pytest.mark.skip(reason="MCP server has I/O file closure issues with Click test runner")
+    @pytest.mark.skip(
+        reason="MCP server has I/O file closure issues with Click test runner"
+    )
     @patch("mcp_skills.cli.main.MCPSkillsServer")
     @patch("mcp_skills.cli.main.MCPSkillsConfig")
     def test_mcp_basic(
@@ -45,7 +47,9 @@ class TestMCPCommand:
         # Verify
         assert "Starting MCP server" in result.output
 
-    @pytest.mark.skip(reason="MCP server has I/O file closure issues with Click test runner")
+    @pytest.mark.skip(
+        reason="MCP server has I/O file closure issues with Click test runner"
+    )
     @patch("mcp_skills.cli.main.MCPSkillsServer")
     @patch("mcp_skills.cli.main.MCPSkillsConfig")
     def test_mcp_dev_mode(

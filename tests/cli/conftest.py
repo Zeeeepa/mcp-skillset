@@ -2,21 +2,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Generator
-from unittest.mock import MagicMock, Mock
+from typing import TYPE_CHECKING
+from unittest.mock import Mock
 
 import pytest
 from click.testing import CliRunner
 
 from mcp_skills.models.config import HybridSearchConfig, MCPSkillsConfig
 from mcp_skills.models.repository import Repository
-from mcp_skills.models.skill import Skill, SkillMetadata
+from mcp_skills.models.skill import Skill
 from mcp_skills.services.indexing.hybrid_search import ScoredSkill
 from mcp_skills.services.toolchain_detector import ToolchainInfo
 
+
 if TYPE_CHECKING:
-    from pytest import FixtureRequest
+    pass
 
 
 @pytest.fixture
@@ -96,7 +98,9 @@ def mock_skill_manager(mock_skill: Skill) -> Generator[Mock, None, None]:
     manager = Mock()
     # Return actual lists, not Mocks, so len() works
     manager.discover_skills.return_value = [mock_skill]
-    manager.search_skills.return_value = [(mock_skill, 0.95)]  # Return tuples with scores
+    manager.search_skills.return_value = [
+        (mock_skill, 0.95)
+    ]  # Return tuples with scores
     manager.get_skill.return_value = mock_skill
     manager.load_skill.return_value = mock_skill  # Add load_skill method
     manager.list_categories.return_value = ["testing", "development"]

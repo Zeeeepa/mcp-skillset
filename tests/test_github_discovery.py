@@ -112,7 +112,9 @@ class TestGitHubDiscovery:
     ) -> None:
         """Test search with no results."""
         mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({"total_count": 0, "items": []}).encode()
+        mock_response.read.return_value = json.dumps(
+            {"total_count": 0, "items": []}
+        ).encode()
         mock_response.headers = {}
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
@@ -168,7 +170,9 @@ class TestGitHubDiscovery:
         mock_response.headers = {}
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        is_valid = discovery_service.verify_skill_repo("https://github.com/test/repo.git")
+        is_valid = discovery_service.verify_skill_repo(
+            "https://github.com/test/repo.git"
+        )
 
         assert is_valid is True
 
@@ -184,7 +188,9 @@ class TestGitHubDiscovery:
         mock_response.headers = {}
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        is_valid = discovery_service.verify_skill_repo("https://github.com/test/invalid.git")
+        is_valid = discovery_service.verify_skill_repo(
+            "https://github.com/test/invalid.git"
+        )
 
         assert is_valid is False
 

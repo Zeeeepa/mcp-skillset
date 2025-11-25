@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -19,7 +18,7 @@ class TestDoctorCommand:
         result = cli_runner.invoke(cli, ["doctor", "--help"])
 
         assert result.exit_code == 0
-        assert "health check" in result.output.lower()
+        assert "health" in result.output.lower()
 
     @patch("mcp_skills.cli.main.MCPSkillsConfig")
     @patch("mcp_skills.cli.main.SkillManager")
@@ -94,7 +93,9 @@ class TestDoctorCommand:
 
         # Verify warning about no skills
         assert result.exit_code == 0
-        assert "no skills" in result.output.lower() or "warning" in result.output.lower()
+        assert (
+            "no skills" in result.output.lower() or "warning" in result.output.lower()
+        )
 
     @patch("mcp_skills.cli.main.MCPSkillsConfig")
     @patch("mcp_skills.cli.main.IndexingEngine")

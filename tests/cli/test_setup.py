@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from mcp_skills.cli.main import cli
 
+
 if TYPE_CHECKING:
-    from mcp_skills.models.config import MCPSkillsConfig
     from mcp_skills.models.toolchain import ToolchainInfo
 
 
@@ -76,7 +75,14 @@ class TestSetupCommand:
         config_path = tmp_path / "config.yaml"
         result = cli_runner.invoke(
             cli,
-            ["setup", "--project-dir", str(tmp_path), "--config", str(config_path), "--auto"],
+            [
+                "setup",
+                "--project-dir",
+                str(tmp_path),
+                "--config",
+                str(config_path),
+                "--auto",
+            ],
         )
 
         # Verify

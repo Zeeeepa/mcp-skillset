@@ -6,14 +6,14 @@ GitHub's REST API v3. Supports searching, filtering, and verification.
 
 import json
 import logging
-import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib import request
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
+
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +284,12 @@ class GitHubDiscovery:
         try:
             results = self._api_request(
                 "/search/repositories",
-                params={"q": search_query, "sort": "stars", "order": "desc", "per_page": 30},
+                params={
+                    "q": search_query,
+                    "sort": "stars",
+                    "order": "desc",
+                    "per_page": 30,
+                },
             )
 
             repos = []
@@ -536,7 +541,9 @@ class GitHubDiscovery:
             updated_at=datetime.fromisoformat(
                 data.get("updated_at", "").replace("Z", "+00:00")
             ),
-            license=data.get("license", {}).get("spdx_id") if data.get("license") else None,
+            license=(
+                data.get("license", {}).get("spdx_id") if data.get("license") else None
+            ),
             topics=data.get("topics", []),
         )
 
