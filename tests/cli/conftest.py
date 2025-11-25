@@ -33,7 +33,7 @@ def mock_config(tmp_path: Path) -> MCPSkillsConfig:
     return MCPSkillsConfig(
         base_dir=config_dir,
         repositories=[],  # Empty list to avoid Repository initialization issues
-        search=HybridSearchConfig(
+        hybrid_search=HybridSearchConfig(
             vector_weight=0.7,
             graph_weight=0.3,
         ),
@@ -58,29 +58,35 @@ def mock_toolchain_info() -> ToolchainInfo:
 def mock_skill() -> Skill:
     """Provide mock skill."""
     return Skill(
-        metadata=SkillMetadata(
-            name="Test Skill",
-            description="A test skill for unit testing",
-            category="testing",
-            tags=["testing", "python"],
-            dependencies=[],
-            version="1.0.0",
-            author="Test Author",
-        ),
-        content="Test skill content",
+        id="test-skill",
+        name="Test Skill",
+        description="A test skill for unit testing",
+        instructions="Test skill content with detailed instructions for testing purposes.",
+        category="testing",
+        tags=["testing", "python"],
+        dependencies=[],
+        examples=["Example 1: Run tests", "Example 2: Debug tests"],
         file_path=Path("/test/skill.md"),
+        repo_id="test-repo",
+        version="1.0.0",
+        author="Test Author",
     )
 
 
 @pytest.fixture
-def mock_repository() -> Mock:
+def mock_repository() -> Repository:
     """Provide mock repository."""
-    repo = Mock()
-    repo.url = "https://github.com/example/skills.git"
-    repo.id = "example-skills"
-    repo.priority = 1
-    repo.local_path = Path("/tmp/repos/example-skills")
-    return repo
+    from datetime import datetime
+
+    return Repository(
+        id="example-skills",
+        url="https://github.com/example/skills.git",
+        local_path=Path("/tmp/repos/example-skills"),
+        priority=1,
+        last_updated=datetime.now(),
+        skill_count=10,
+        license="MIT",
+    )
 
 
 @pytest.fixture
