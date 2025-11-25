@@ -53,7 +53,16 @@ For detailed security information, threat models, and best practices, see [SECUR
 
 ## Installation
 
-### With pipx (Recommended)
+### With Homebrew (macOS/Linux)
+
+The easiest way to install on macOS or Linux:
+
+```bash
+brew tap bobmatnyc/tools
+brew install mcp-skillset
+```
+
+### With pipx (Recommended for non-Homebrew)
 
 [pipx](https://pipx.pypa.io/) is the recommended way to install Python CLI applications:
 
