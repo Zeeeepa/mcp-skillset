@@ -545,6 +545,16 @@ For vulnerability reporting and security best practices, see [.github/SECURITY.m
 
 ## Documentation
 
+### Deployment & Release
+See [docs/DEPLOY.md](docs/DEPLOY.md) for the complete deployment and release workflow, including:
+- Automated release process with Claude MPM multi-agent coordination
+- PyPI publishing with stored credentials
+- Homebrew tap management (consolidated bobmatnyc/tools tap)
+- Pre-release validation, quality gates, and security scanning
+- Post-release verification across all channels
+- Rollback procedures and troubleshooting
+- Quick reference commands for next release
+
 ### Architecture
 See [docs/architecture/README.md](docs/architecture/README.md) for detailed architecture design.
 
