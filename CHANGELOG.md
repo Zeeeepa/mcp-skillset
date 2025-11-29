@@ -7,14 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2025-11-29
+
 ### Added
-- Agent installation now integrated into `setup` command as Step 6 - automatically detects and configures Claude Desktop, Claude Code, and Auggie
+- Agent installation now integrated into `setup` command as Step 6
+- Automatically detects and configures Claude Desktop, Claude Code, and Auggie
 - `--skip-agents` flag for `setup` command to skip automatic agent installation
+- True one-command setup experience - `setup` now means "ready to use"
 
 ### Changed
-- `setup` command now provides complete one-command installation experience, matching mcp-ticketer's setup workflow
-- Setup process now includes 6 steps instead of 5, with agent installation as the final step
-- Updated documentation to reflect new integrated setup experience
+- `setup` command now includes 6 steps instead of 5
+- Setup process provides complete installation without manual agent configuration
+- Updated documentation to reflect new integrated setup workflow
+- Improved user experience to match mcp-ticketer's setup approach
+
+### Fixed
+- Setup tests now properly validate agent installation step
+- Mock objects in tests return correct types (lists instead of Mock objects)
 
 ## [0.6.3] - 2025-11-28
 
