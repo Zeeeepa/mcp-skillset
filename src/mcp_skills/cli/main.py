@@ -223,7 +223,9 @@ def setup(project_dir: str, config: str, auto: bool, skip_agents: bool) -> None:
             detector = AgentDetector()
             # Exclude Claude Desktop by default (config path conflicts with Claude Code)
             all_agents = detector.detect_all()
-            found_agents = [a for a in all_agents if a.exists and a.id != "claude-desktop"]
+            found_agents = [
+                a for a in all_agents if a.exists and a.id != "claude-desktop"
+            ]
 
             if found_agents:
                 console.print(f"  ✓ Detected {len(found_agents)} agent(s):")
