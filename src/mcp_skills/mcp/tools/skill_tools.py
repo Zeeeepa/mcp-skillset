@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @mcp.tool()
-async def search_skills(
+async def skills_search(
     query: str,
     toolchain: str | None = None,
     category: str | None = None,
@@ -61,7 +61,7 @@ async def search_skills(
         - error: Error message (if failed)
 
     Example:
-        >>> search_skills("pytest testing", toolchain="python", limit=5)
+        >>> skills_search("pytest testing", toolchain="python", limit=5)
         {
             "status": "completed",
             "skills": [
@@ -139,7 +139,7 @@ async def search_skills(
 
 
 @mcp.tool()
-async def get_skill(skill_id: str) -> dict[str, Any]:
+async def skill_get(skill_id: str) -> dict[str, Any]:
     """Get complete skill details including instructions.
 
     Retrieves full skill data from the skill manager's cache or loads
@@ -157,7 +157,7 @@ async def get_skill(skill_id: str) -> dict[str, Any]:
         - error: Error message (if failed)
 
     Example:
-        >>> get_skill("pytest-skill")
+        >>> skill_get("pytest-skill")
         {
             "status": "completed",
             "skill": {
@@ -217,7 +217,7 @@ async def get_skill(skill_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def recommend_skills(
+async def skills_recommend(
     current_skill: str | None = None,
     project_path: str | None = None,
     limit: int = 5,
@@ -252,7 +252,7 @@ async def recommend_skills(
         - error: Error message (if failed)
 
     Example:
-        >>> recommend_skills(project_path="/path/to/python/project", limit=5)
+        >>> skills_recommend(project_path="/path/to/python/project", limit=5)
         {
             "status": "completed",
             "recommendations": [
@@ -395,7 +395,7 @@ async def recommend_skills(
 
 
 @mcp.tool()
-async def list_categories() -> dict[str, Any]:
+async def skill_categories() -> dict[str, Any]:
     """List all available skill categories.
 
     Returns all predefined skill categories along with skill counts
@@ -410,7 +410,7 @@ async def list_categories() -> dict[str, Any]:
         - error: Error message (if failed)
 
     Example:
-        >>> list_categories()
+        >>> skill_categories()
         {
             "status": "completed",
             "categories": [
@@ -454,7 +454,7 @@ async def list_categories() -> dict[str, Any]:
 
 
 @mcp.tool()
-async def reindex_skills(force: bool = False) -> dict[str, Any]:
+async def skills_reindex(force: bool = False) -> dict[str, Any]:
     """Rebuild skill index (ChromaDB + NetworkX knowledge graph).
 
     Rebuilds the hybrid search index by:
@@ -479,7 +479,7 @@ async def reindex_skills(force: bool = False) -> dict[str, Any]:
         - error: Error message (if failed)
 
     Example:
-        >>> reindex_skills(force=True)
+        >>> skills_reindex(force=True)
         {
             "status": "completed",
             "indexed_count": 42,
@@ -517,4 +517,237 @@ async def reindex_skills(force: bool = False) -> dict[str, Any]:
         return {
             "status": "error",
             "error": f"Failed to reindex skills: {str(e)}",
+        }
+
+
+@mcp.tool()
+async def skill_templates_list() -> dict[str, Any]:
+    """List available skill templates with descriptions.
+
+    Returns information about all available templates that can be used
+    with skill_create. Templates provide structured starting points for
+    different skill domains. Helps AI agents choose the right template
+    for their needs.
+
+    Templates Available:
+    - base: General-purpose template for any domain
+    - web-development: Web development patterns and practices
+    - api-development: REST/GraphQL API design and implementation
+    - testing: Testing strategies and TDD workflows
+
+    Returns:
+        Dictionary containing:
+        - status: "completed" or "error"
+        - templates: List of template objects with name, description, use_cases
+        - default: Default template name
+        - total: Total number of templates
+        - error: Error message (if failed)
+
+    Example:
+        >>> skill_templates_list()
+        {
+            "status": "completed",
+            "templates": [
+                {
+                    "name": "base",
+                    "description": "General-purpose template for any domain",
+                    "use_cases": ["Custom workflows", "General best practices"]
+                },
+                {
+                    "name": "web-development",
+                    "description": "Web development patterns and practices",
+                    "use_cases": ["Frontend", "Backend", "Full-stack development"]
+                }
+            ],
+            "default": "base",
+            "total": 4
+        }
+
+    """
+    try:
+        templates = [
+            {
+                "name": "base",
+                "description": "General-purpose template for any domain",
+                "use_cases": ["Custom workflows", "General best practices"],
+            },
+            {
+                "name": "web-development",
+                "description": "Web development patterns and practices",
+                "use_cases": ["Frontend", "Backend", "Full-stack development"],
+            },
+            {
+                "name": "api-development",
+                "description": "REST/GraphQL API design and implementation",
+                "use_cases": ["REST APIs", "GraphQL", "API security"],
+            },
+            {
+                "name": "testing",
+                "description": "Testing strategies and TDD workflows",
+                "use_cases": ["Unit testing", "Integration testing", "TDD"],
+            },
+        ]
+
+        return {
+            "status": "completed",
+            "templates": templates,
+            "default": "base",
+            "total": len(templates),
+        }
+    except Exception as e:
+        logger.error(f"Failed to list templates: {e}")
+        return {
+            "status": "error",
+            "error": f"Failed to list templates: {str(e)}",
+        }
+
+
+@mcp.tool()
+async def skill_create(
+    name: str,
+    description: str,
+    domain: str,
+    tags: list[str] | None = None,
+    template: str = "base",
+    deploy: bool = True,
+) -> dict[str, Any]:
+    """Create a progressive skill from template.
+
+    This tool allows AI agents to generate reusable skills that can be loaded
+    by Claude in future sessions. Skills follow the progressive disclosure format
+    with YAML frontmatter (~100 tokens) and markdown body (<5000 tokens).
+
+    Skills are automatically:
+    - Generated from domain-specific templates (Jinja2)
+    - Validated for structure and security patterns
+    - Deployed to ~/.claude/skills/ for immediate availability
+    - Integrated with Claude Code's skill loading system
+
+    Template Selection:
+    - base: General-purpose skill template
+    - web-development: Web development workflows
+    - api-development: API design and implementation
+    - testing: Testing strategies and TDD
+
+    Security & Validation:
+    - Scans for hardcoded credentials/secrets
+    - Checks for dangerous code patterns (exec, eval)
+    - Validates YAML frontmatter structure
+    - Enforces size limits for progressive disclosure
+
+    Args:
+        name: Skill name (e.g., "FastAPI Testing"). Will be normalized to kebab-case.
+        description: What the skill does and when to use it (minimum 20 chars)
+        domain: Domain area (e.g., "web development", "testing", "security")
+        tags: List of relevant tags for categorization (optional)
+        template: Template to use (base, web-development, api-development, testing)
+        deploy: Whether to deploy to ~/.claude/skills/ (default: True)
+
+    Returns:
+        Dictionary containing:
+        - status: "success" or "error"
+        - skill_id: Generated skill identifier (kebab-case)
+        - skill_path: Path to deployed SKILL.md (if deploy=True)
+        - message: Success/error message
+        - validation: Validation results (warnings/errors)
+        - error: Detailed error message (if failed)
+
+    Examples:
+        >>> # Create a web development skill
+        >>> skill_create(
+        ...     name="FastAPI Testing",
+        ...     description="Test FastAPI endpoints with pytest and httpx",
+        ...     domain="web development",
+        ...     tags=["fastapi", "pytest", "testing"],
+        ...     template="web-development"
+        ... )
+        {
+            "status": "success",
+            "skill_id": "fastapi-testing",
+            "skill_path": "/Users/user/.claude/skills/fastapi-testing/SKILL.md",
+            "message": "Skill 'fastapi-testing' created successfully",
+            "validation": {"warnings": []}
+        }
+
+        >>> # Create a general skill
+        >>> skill_create(
+        ...     name="Code Review Checklist",
+        ...     description="Systematic code review process for quality assurance",
+        ...     domain="software engineering",
+        ...     tags=["code-review", "quality"]
+        ... )
+        {
+            "status": "success",
+            "skill_id": "code-review-checklist",
+            "skill_path": "/Users/user/.claude/skills/code-review-checklist/SKILL.md",
+            "message": "Skill 'code-review-checklist' created successfully"
+        }
+
+        >>> # Create without deployment (preview only)
+        >>> skill_create(
+        ...     name="Prototype Skill",
+        ...     description="Testing skill generation without deployment",
+        ...     domain="testing",
+        ...     deploy=False
+        ... )
+        {
+            "status": "success",
+            "skill_id": "prototype-skill",
+            "skill_path": None,
+            "message": "Skill 'prototype-skill' created successfully"
+        }
+
+    """
+    try:
+        from ...services.skill_builder import SkillBuilder
+
+        # Validate template choice
+        valid_templates = ["base", "web-development", "api-development", "testing"]
+        if template not in valid_templates:
+            return {
+                "status": "error",
+                "error": f"Invalid template '{template}'. Must be one of: {', '.join(valid_templates)}",
+                "valid_templates": valid_templates,
+            }
+
+        # Initialize SkillBuilder
+        builder = SkillBuilder()
+
+        # Build skill
+        result = builder.build_skill(
+            name=name,
+            description=description,
+            domain=domain,
+            tags=tags,
+            template=template,
+            deploy=deploy,
+        )
+
+        # Add validation info to response
+        if result["status"] == "success":
+            return {
+                "status": "success",
+                "skill_id": result["skill_id"],
+                "skill_path": result["skill_path"],
+                "message": result["message"],
+                "validation": {"warnings": result.get("warnings", [])},
+            }
+        else:
+            # Return error with detailed validation info
+            return {
+                "status": "error",
+                "skill_id": result.get("skill_id"),
+                "message": result["message"],
+                "error": result["message"],
+                "validation": {
+                    "errors": result.get("errors", []),
+                    "warnings": result.get("warnings", []),
+                },
+            }
+
+    except Exception as e:
+        logger.error(f"Error creating skill: {e}")
+        return {
+            "status": "error",
+            "error": f"Failed to create skill: {str(e)}",
         }

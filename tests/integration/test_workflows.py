@@ -14,11 +14,11 @@ import pytest
 
 from mcp_skills.mcp.server import configure_services
 from mcp_skills.mcp.tools.skill_tools import (
-    get_skill,
-    list_categories,
-    recommend_skills,
-    reindex_skills,
-    search_skills,
+    skill_categories,
+    skill_get,
+    skills_recommend,
+    skills_reindex,
+    skills_search,
 )
 from mcp_skills.models.skill import Skill
 from mcp_skills.services.indexing import IndexingEngine
@@ -259,14 +259,14 @@ class TestMCPServerWorkflow:
         base_dir = populated_repos_dir.parent
         configure_services(base_dir=base_dir, storage_path=temp_storage_dir)
 
-        # 2. Call reindex_skills tool first
-        reindex_result = await reindex_skills(force=True)
+        # 2. Call skills_reindex tool first
+        reindex_result = await skills_reindex(force=True)
         assert reindex_result["status"] == "completed"
         assert reindex_result["indexed_count"] >= 3
         assert reindex_result["graph_nodes"] >= 3
 
-        # 3. Call search_skills tool
-        search_result = await search_skills(query="python testing", limit=5)
+        # 3. Call skills_search tool
+        search_result = await skills_search(query="python testing", limit=5)
         assert search_result["status"] == "completed"
         assert "skills" in search_result
         assert len(search_result["skills"]) > 0
@@ -277,15 +277,15 @@ class TestMCPServerWorkflow:
         assert "description" in skill
         assert "score" in skill
 
-        # 4. Call get_skill tool
+        # 4. Call skill_get tool
         skill_id = search_result["skills"][0]["id"]
-        get_result = await get_skill(skill_id=skill_id)
+        get_result = await skill_get(skill_id=skill_id)
         assert get_result["status"] == "completed"
         assert get_result["skill"]["id"] == skill_id
         assert "instructions" in get_result["skill"]
 
-        # 5. Call list_categories tool
-        categories_result = await list_categories()
+        # 5. Call skill_categories tool
+        categories_result = await skill_categories()
         assert categories_result["status"] == "completed"
         assert "categories" in categories_result
         assert len(categories_result["categories"]) > 0
@@ -294,8 +294,8 @@ class TestMCPServerWorkflow:
         assert "testing" in category_names
         assert "architecture" in category_names
 
-        # 6. Call recommend_skills tool (with populated repo dir)
-        recommend_result = await recommend_skills(
+        # 6. Call skills_recommend tool (with populated repo dir)
+        recommend_result = await skills_recommend(
             project_path=str(populated_repos_dir), limit=5
         )
         assert recommend_result["status"] == "completed"
@@ -307,13 +307,13 @@ class TestMCPServerWorkflow:
         # All results checked above have correct structure
 
         # 8. Test error handling (invalid inputs)
-        # Test get_skill with non-existent ID
-        error_result = await get_skill(skill_id="invalid/skill/id")
+        # Test skill_get with non-existent ID
+        error_result = await skill_get(skill_id="invalid/skill/id")
         assert error_result["status"] == "error"
         assert "error" in error_result
 
         # Test search with invalid parameters
-        search_error = await search_skills(query="", limit=5)
+        search_error = await skills_search(query="", limit=5)
         # Empty query should return empty results, not error
         assert search_error["status"] == "completed"
         assert len(search_error["skills"]) == 0
