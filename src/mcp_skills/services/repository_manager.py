@@ -5,10 +5,11 @@ import re
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TypedDict
+from typing import Callable, TypedDict
 from urllib.parse import urlparse
 
 import git
+from git import RemoteProgress
 
 from mcp_skills.models.repository import Repository
 from mcp_skills.services.metadata_store import MetadataStore
@@ -23,6 +24,40 @@ class RepoConfig(TypedDict):
     url: str
     priority: int
     license: str
+
+
+class CloneProgress(RemoteProgress):
+    """GitPython progress handler for repository cloning and updates.
+
+    Translates GitPython's RemoteProgress callbacks into a simpler callback
+    interface suitable for CLI progress bars.
+
+    Args:
+        callback: Function called with (current, total, message) during git operations
+    """
+
+    def __init__(self, callback: Callable[[int, int, str], None]) -> None:
+        """Initialize progress handler with callback function."""
+        super().__init__()
+        self.callback = callback
+
+    def update(
+        self,
+        op_code: int,
+        cur_count: int | float,
+        max_count: int | float | None = None,
+        message: str = "",
+    ) -> None:
+        """Called by GitPython during clone/pull operations.
+
+        Args:
+            op_code: Operation code (not used, but required by GitPython)
+            cur_count: Current progress count
+            max_count: Total count (None for indeterminate progress)
+            message: Progress message from git
+        """
+        if max_count and self.callback:
+            self.callback(int(cur_count), int(max_count), message or "")
 
 
 class RepositoryManager:
@@ -170,6 +205,94 @@ class RepositoryManager:
 
         return repository
 
+    def add_repository_with_progress(
+        self,
+        url: str,
+        priority: int = 0,
+        license: str = "Unknown",
+        progress_callback: Callable[[int, int, str], None] | None = None,
+    ) -> Repository:
+        """Clone new repository with progress tracking.
+
+        Args:
+            url: Git repository URL
+            priority: Priority for skill selection (0-100)
+            license: Repository license (default: "Unknown")
+            progress_callback: Called with (current, total, message) during clone
+
+        Returns:
+            Repository metadata object
+
+        Raises:
+            ValueError: If URL is invalid or repository already exists
+
+        Design Decision: Progress Callback Pattern
+
+        Rationale: Using optional callback parameter preserves backward compatibility
+        while enabling rich progress displays in CLI. Callback pattern is simpler than
+        event-based systems and avoids coupling service layer to UI libraries.
+
+        Trade-offs:
+        - Simplicity: Direct callback is easy to understand and test
+        - Coupling: Caller controls UI but must handle progress updates
+        - Flexibility: Works with any UI framework (Rich, tqdm, etc.)
+
+        Error Handling:
+        - InvalidGitRepositoryError: URL is not a valid git repository
+        - GitCommandError: Clone operation failed (network, permissions, etc.)
+        - ValueError: Invalid priority range or duplicate repository
+        """
+        # 1. Validate URL
+        if not self._is_valid_git_url(url):
+            raise ValueError(f"Invalid git URL: {url}")
+
+        # 2. Validate priority range
+        if not 0 <= priority <= 100:
+            raise ValueError(f"Priority must be between 0-100, got {priority}")
+
+        # 3. Generate repository ID from URL
+        repo_id = self._generate_repo_id(url)
+
+        # 4. Check if already exists
+        existing = self.get_repository(repo_id)
+        if existing:
+            raise ValueError(
+                f"Repository already exists: {repo_id} at {existing.local_path}"
+            )
+
+        # 5. Clone repository with progress tracking
+        local_path = self.base_dir / repo_id
+        logger.info(f"Cloning repository {url} to {local_path}")
+
+        try:
+            if progress_callback:
+                progress_handler = CloneProgress(progress_callback)
+                git.Repo.clone_from(url, local_path, depth=1, progress=progress_handler)
+            else:
+                git.Repo.clone_from(url, local_path, depth=1)
+        except git.exc.GitCommandError as e:
+            raise ValueError(f"Failed to clone repository {url}: {e}") from e
+
+        # 6. Scan for skills
+        skill_count = self._count_skills(local_path)
+        logger.info(f"Found {skill_count} skills in {repo_id}")
+
+        # 7. Create Repository object
+        repository = Repository(
+            id=repo_id,
+            url=url,
+            local_path=local_path,
+            priority=priority,
+            last_updated=datetime.now(UTC),
+            skill_count=skill_count,
+            license=license,
+        )
+
+        # 8. Store metadata in SQLite
+        self.metadata_store.add_repository(repository)
+
+        return repository
+
     def update_repository(self, repo_id: str) -> Repository:
         """Pull latest changes from repository.
 
@@ -204,6 +327,70 @@ class RepositoryManager:
             repo = git.Repo(repository.local_path)
             origin = repo.remotes.origin
             origin.pull()
+        except git.exc.InvalidGitRepositoryError as e:
+            raise ValueError(
+                f"Local repository is corrupted: {repository.local_path}. "
+                f"Consider removing and re-cloning: {e}"
+            ) from e
+        except git.exc.GitCommandError as e:
+            raise ValueError(f"Failed to update repository {repo_id}: {e}") from e
+
+        # 3. Rescan for new/updated skills
+        skill_count = self._count_skills(repository.local_path)
+        logger.info(f"Rescanned {repo_id}: {skill_count} skills found")
+
+        # 4. Update metadata
+        repository.last_updated = datetime.now(UTC)
+        repository.skill_count = skill_count
+
+        # 5. Save updated metadata to SQLite
+        self.metadata_store.update_repository(repository)
+
+        return repository
+
+    def update_repository_with_progress(
+        self,
+        repo_id: str,
+        progress_callback: Callable[[int, int, str], None] | None = None,
+    ) -> Repository:
+        """Pull latest changes from repository with progress tracking.
+
+        Args:
+            repo_id: Repository identifier
+            progress_callback: Called with (current, total, message) during pull
+
+        Returns:
+            Updated repository metadata
+
+        Raises:
+            ValueError: If repository not found
+
+        Error Handling:
+        - ValueError: Repository not found in metadata
+        - GitCommandError: Pull operation failed (network, conflicts, etc.)
+        - InvalidGitRepositoryError: Local clone is corrupted
+
+        Recovery Strategy:
+        - Pull failures are propagated to caller for explicit handling
+        - Consider re-cloning if local repository is corrupted
+        - No automatic conflict resolution (user must handle manually)
+        """
+        # 1. Find repository by ID
+        repository = self.get_repository(repo_id)
+        if not repository:
+            raise ValueError(f"Repository not found: {repo_id}")
+
+        # 2. Git pull latest changes with progress tracking
+        logger.info(f"Updating repository {repo_id} from {repository.url}")
+
+        try:
+            repo = git.Repo(repository.local_path)
+            origin = repo.remotes.origin
+            if progress_callback:
+                progress_handler = CloneProgress(progress_callback)
+                origin.pull(progress=progress_handler)
+            else:
+                origin.pull()
         except git.exc.InvalidGitRepositoryError as e:
             raise ValueError(
                 f"Local repository is corrupted: {repository.local_path}. "

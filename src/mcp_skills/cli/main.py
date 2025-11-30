@@ -16,7 +16,15 @@ from pathlib import Path
 import click
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 from rich.table import Table
 from rich.tree import Tree
 
@@ -126,33 +134,67 @@ def setup(project_dir: str, config: str, auto: bool, skip_agents: bool) -> None:
                     "  [dim]You can add repositories later with: mcp-skillset repo add <url>[/dim]"
                 )
 
-        # Clone repositories
+        # Clone repositories with per-repository progress bars
         added_repos: ListType[Repository] = []
-        for repo_config in repos_to_add:
-            try:
-                # Check if already exists
-                repo_id = repo_manager._generate_repo_id(repo_config["url"])
-                existing = repo_manager.get_repository(repo_id)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(bar_width=40),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            TimeRemainingColumn(),
+            console=console,
+        ) as progress:
+            for repo_config in repos_to_add:
+                # Extract repo name from URL for display
+                repo_name = repo_config["url"].split("/")[-1].replace(".git", "")
 
-                if existing:
+                try:
+                    # Check if already exists
+                    repo_id = repo_manager._generate_repo_id(repo_config["url"])
+                    existing = repo_manager.get_repository(repo_id)
+
+                    if existing:
+                        console.print(
+                            f"  ⊙ Repository already exists: {repo_config['url']}"
+                        )
+                        added_repos.append(existing)
+                    else:
+                        # Create task for this repository
+                        task_id = progress.add_task(
+                            f"Cloning {repo_name}",
+                            total=100,  # Will be updated by callback
+                            start=False,
+                        )
+
+                        # Progress callback updates this specific task
+                        def make_callback(tid: int):  # type: ignore[misc]
+                            def update_progress(
+                                current: int, total: int, message: str
+                            ) -> None:
+                                if total > 0:
+                                    progress.update(tid, completed=current, total=total)
+                                    if not progress.tasks[tid].started:
+                                        progress.start_task(tid)
+
+                            return update_progress
+
+                        new_repo = repo_manager.add_repository_with_progress(
+                            url=repo_config["url"],
+                            priority=repo_config["priority"],
+                            license=repo_config.get("license", "Unknown"),
+                            progress_callback=make_callback(task_id),
+                        )
+                        progress.update(
+                            task_id, description=f"✓ {repo_name}", completed=100
+                        )
+                        added_repos.append(new_repo)
+                        console.print(f"  ✓ Cloned {new_repo.skill_count} skills")
+                except Exception as e:
                     console.print(
-                        f"  ⊙ Repository already exists: {repo_config['url']}"
+                        f"  [red]✗ Failed to clone {repo_config['url']}: {e}[/red]"
                     )
-                    added_repos.append(existing)
-                else:
-                    console.print(f"  + Cloning: {repo_config['url']}")
-                    new_repo = repo_manager.add_repository(
-                        url=repo_config["url"],
-                        priority=repo_config["priority"],
-                        license=repo_config["license"],
-                    )
-                    added_repos.append(new_repo)
-                    console.print(f"    ✓ Cloned {new_repo.skill_count} skills")
-            except Exception as e:
-                console.print(
-                    f"    [red]✗ Failed to clone {repo_config['url']}: {e}[/red]"
-                )
-                logger.error(f"Repository clone failed: {e}")
+                    logger.error(f"Repository clone failed: {e}")
 
         if not added_repos:
             console.print(
@@ -1316,16 +1358,35 @@ def repo_add(url: str, priority: int) -> None:
     try:
         repo_manager = RepositoryManager()
 
-        # Add repository
+        # Extract repo name from URL for display
+        repo_name = url.split("/")[-1].replace(".git", "")
+
+        # Add repository with progress bar
         with Progress(
             SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(bar_width=40),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            TimeRemainingColumn(),
             console=console,
         ) as progress:
-            task = progress.add_task("Cloning repository...", total=None)
+            task = progress.add_task(
+                f"Cloning {repo_name}", total=100, start=False
+            )
+
+            # Progress callback updates this specific task
+            def update_progress(current: int, total: int, message: str) -> None:
+                if total > 0:
+                    progress.update(task, completed=current, total=total)
+                    if not progress.tasks[task].started:
+                        progress.start_task(task)
+
             try:
-                repo = repo_manager.add_repository(url, priority=priority)
-                progress.update(task, completed=True)
+                repo = repo_manager.add_repository_with_progress(
+                    url, priority=priority, progress_callback=update_progress
+                )
+                progress.update(task, description=f"✓ {repo_name}", completed=100)
 
                 console.print("[green]✓[/green] Repository added successfully")
                 console.print(f"  • ID: {repo.id}")
@@ -1450,15 +1511,36 @@ def repo_update(repo_id: str | None) -> None:
 
             with Progress(
                 SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
+                TextColumn("[bold blue]{task.description}"),
+                BarColumn(bar_width=40),
+                DownloadColumn(),
+                TransferSpeedColumn(),
+                TimeRemainingColumn(),
                 console=console,
             ) as progress:
                 for repo in repos:
-                    task = progress.add_task(f"Updating {repo.id}...", total=None)
+                    task = progress.add_task(
+                        f"Updating {repo.id}", total=100, start=False
+                    )
+
+                    # Progress callback updates this specific task
+                    def make_callback(tid: int):  # type: ignore[misc]
+                        def update_progress(
+                            current: int, total: int, message: str
+                        ) -> None:
+                            if total > 0:
+                                progress.update(tid, completed=current, total=total)
+                                if not progress.tasks[tid].started:
+                                    progress.start_task(tid)
+
+                        return update_progress
+
                     try:
                         old_skill_count = repo.skill_count
-                        updated_repo = repo_manager.update_repository(repo.id)
-                        progress.update(task, completed=True)
+                        updated_repo = repo_manager.update_repository_with_progress(
+                            repo.id, progress_callback=make_callback(task)
+                        )
+                        progress.update(task, description=f"✓ {repo.id}", completed=100)
 
                         updated_count += 1
                         skill_diff = updated_repo.skill_count - old_skill_count
@@ -1476,15 +1558,9 @@ def repo_update(repo_id: str | None) -> None:
                             console.print(f"  [green]✓[/green] {repo.id}: up to date")
 
                     except Exception as e:
-                        progress.stop()
+                        progress.update(task, description=f"✗ {repo.id}")
                         console.print(f"  [red]✗[/red] {repo.id}: {e}")
                         failed_count += 1
-                        progress = Progress(
-                            SpinnerColumn(),
-                            TextColumn("[progress.description]{task.description}"),
-                            console=console,
-                        )
-                        progress.start()
 
             console.print()
             console.print("[bold]Summary:[/bold]")
