@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -356,6 +356,348 @@ class TestAgentInstaller:
         existing = {"mcpServers": {"mcp-skillset": {"command": "old"}}}
         description = installer._describe_changes(existing)
         assert "update" in description.lower()
+
+
+class TestClaudeCLIIntegration:
+    """Test suite for Claude CLI integration (1M-432)."""
+
+    @pytest.fixture
+    def installer(self):
+        """Create an AgentInstaller instance."""
+        return AgentInstaller()
+
+    @pytest.fixture
+    def claude_code_agent(self, tmp_path):
+        """Create a Claude Code agent for testing."""
+        config_path = tmp_path / "Code" / "settings.json"
+        return DetectedAgent(
+            name="Claude Code",
+            id="claude-code",
+            config_path=config_path,
+            exists=False,
+        )
+
+    @pytest.fixture
+    def claude_desktop_agent(self, tmp_path):
+        """Create a Claude Desktop agent for testing."""
+        config_path = tmp_path / "Claude" / "claude_desktop_config.json"
+        return DetectedAgent(
+            name="Claude Desktop",
+            id="claude-desktop",
+            config_path=config_path,
+            exists=False,
+        )
+
+    @patch("subprocess.run")
+    @patch("shutil.which")
+    def test_claude_cli_installation_success(
+        self, mock_which, mock_run, installer, claude_code_agent
+    ):
+        """Test successful Claude CLI installation.
+
+        Verifies that when the claude CLI is available and the add command
+        succeeds, the installation completes successfully.
+        """
+        # Mock CLI available
+        mock_which.return_value = "/usr/local/bin/claude"
+
+        # Mock get command failure (server doesn't exist), then add success
+        mock_run.side_effect = [
+            Mock(returncode=1, stdout="", stderr="Not found"),  # get fails
+            Mock(returncode=0, stdout="", stderr=""),  # add succeeds
+        ]
+
+        # Install
+        result = installer.install(claude_code_agent)
+
+        # Verify success
+        assert result.success
+        assert result.agent_name == "Claude Code"
+        assert result.agent_id == "claude-code"
+        assert "Claude CLI" in result.changes_made
+
+        # Verify subprocess calls (get and add)
+        assert mock_run.call_count == 2
+
+        # Verify get command
+        get_call = mock_run.call_args_list[0][0][0]
+        assert "claude" in get_call
+        assert "mcp" in get_call
+        assert "get" in get_call
+        assert "mcp-skillset" in get_call
+
+        # Verify add command
+        add_call = mock_run.call_args_list[1][0][0]
+        assert "claude" in add_call
+        assert "mcp" in add_call
+        assert "add" in add_call
+        assert "mcp-skillset" in add_call
+
+    @patch("shutil.which")
+    def test_claude_cli_not_found(
+        self, mock_which, installer, claude_code_agent
+    ):
+        """Test error when Claude CLI is not found.
+
+        Verifies that installation fails with clear error message when
+        the claude CLI is not available on the system.
+        """
+        # Mock CLI not available
+        mock_which.return_value = None
+
+        # Install
+        result = installer.install(claude_code_agent)
+
+        # Verify failure
+        assert not result.success
+        assert result.error is not None
+        assert "CLI not found" in result.error
+        assert "install Claude Code" in result.error
+
+    @patch("subprocess.run")
+    @patch("shutil.which")
+    def test_claude_cli_already_installed(
+        self, mock_which, mock_run, installer, claude_code_agent
+    ):
+        """Test detection of already installed server.
+
+        Verifies that without --force flag, installation fails when
+        mcp-skillset is already installed.
+        """
+        # Mock CLI available
+        mock_which.return_value = "/usr/local/bin/claude"
+
+        # Mock 'get' command returning success (server exists)
+        mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+
+        # Install without force
+        result = installer.install(claude_code_agent, force=False)
+
+        # Verify failure
+        assert not result.success
+        assert result.error is not None
+        assert "already installed" in result.error
+        assert "--force" in result.error
+
+        # Verify 'get' command was called
+        call_args = mock_run.call_args[0][0]
+        assert "claude" in call_args
+        assert "mcp" in call_args
+        assert "get" in call_args
+        assert "mcp-skillset" in call_args
+
+    @patch("subprocess.run")
+    @patch("shutil.which")
+    def test_claude_cli_force_reinstall(
+        self, mock_which, mock_run, installer, claude_code_agent
+    ):
+        """Test force reinstall workflow.
+
+        Verifies that with --force flag, installation removes existing
+        server and adds it again.
+        """
+        # Mock CLI available
+        mock_which.return_value = "/usr/local/bin/claude"
+
+        # Mock successful CLI commands
+        mock_run.return_value = Mock(returncode=0, stdout="", stderr="")
+
+        # Install with force
+        result = installer.install(claude_code_agent, force=True)
+
+        # Verify success
+        assert result.success
+        assert "Claude CLI" in result.changes_made
+
+        # Verify both remove and add commands were called
+        assert mock_run.call_count >= 2
+
+        # Check remove command
+        remove_call = mock_run.call_args_list[0][0][0]
+        assert "claude" in remove_call
+        assert "mcp" in remove_call
+        assert "remove" in remove_call
+        assert "mcp-skillset" in remove_call
+
+        # Check add command
+        add_call = mock_run.call_args_list[1][0][0]
+        assert "claude" in add_call
+        assert "mcp" in add_call
+        assert "add" in add_call
+        assert "mcp-skillset" in add_call
+
+    @patch("subprocess.run")
+    @patch("shutil.which")
+    def test_claude_cli_dry_run(
+        self, mock_which, mock_run, installer, claude_code_agent
+    ):
+        """Test dry-run mode.
+
+        Verifies that dry-run mode shows what would be done without
+        actually making any changes.
+        """
+        # Mock CLI available
+        mock_which.return_value = "/usr/local/bin/claude"
+
+        # Mock get command failure (server doesn't exist)
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="Not found")
+
+        # Install in dry-run mode
+        result = installer.install(claude_code_agent, dry_run=True)
+
+        # Verify success but no actual execution
+        assert result.success
+        assert result.changes_made is not None
+        assert "[DRY RUN]" in result.changes_made
+        assert "claude mcp add" in result.changes_made
+        assert "mcp-skillset" in result.changes_made
+
+        # Verify only get was called (to check if installed), not add/remove
+        assert mock_run.call_count == 1
+        call_args = mock_run.call_args[0][0]
+        assert "get" in call_args
+
+    @patch("subprocess.run")
+    @patch("shutil.which")
+    def test_claude_cli_dry_run_with_force(
+        self, mock_which, mock_run, installer, claude_code_agent
+    ):
+        """Test dry-run mode with force flag.
+
+        Verifies that dry-run mode shows both remove and add commands
+        when force flag is used.
+        """
+        # Mock CLI available
+        mock_which.return_value = "/usr/local/bin/claude"
+
+        # Install in dry-run mode with force
+        result = installer.install(claude_code_agent, dry_run=True, force=True)
+
+        # Verify success
+        assert result.success
+        assert "[DRY RUN]" in result.changes_made
+        assert "remove" in result.changes_made
+        assert "add" in result.changes_made
+
+        # Verify NO subprocess calls
+        assert not mock_run.called
+
+    @patch("subprocess.run")
+    @patch("shutil.which")
+    def test_claude_cli_add_command_fails(
+        self, mock_which, mock_run, installer, claude_code_agent
+    ):
+        """Test handling of failed add command.
+
+        Verifies that installation fails gracefully when the CLI
+        add command returns an error.
+        """
+        # Mock CLI available
+        mock_which.return_value = "/usr/local/bin/claude"
+
+        # Mock failed add command
+        mock_run.return_value = Mock(
+            returncode=1,
+            stdout="",
+            stderr="Error: Failed to add MCP server",
+        )
+
+        # Install
+        result = installer.install(claude_code_agent)
+
+        # Verify failure
+        assert not result.success
+        assert result.error is not None
+        assert "Failed to add" in result.error
+        assert "Error:" in result.error
+
+    @patch("subprocess.run")
+    @patch("shutil.which")
+    def test_claude_cli_get_command_fails_allows_install(
+        self, mock_which, mock_run, installer, claude_code_agent
+    ):
+        """Test that failed 'get' command allows installation.
+
+        When checking if server exists fails (e.g., server doesn't exist),
+        installation should proceed without force flag.
+        """
+        # Mock CLI available
+        mock_which.return_value = "/usr/local/bin/claude"
+
+        # Mock get command failure (server doesn't exist), then add success
+        mock_run.side_effect = [
+            Mock(returncode=1, stdout="", stderr="Not found"),  # get fails
+            Mock(returncode=0, stdout="", stderr=""),  # add succeeds
+        ]
+
+        # Install without force
+        result = installer.install(claude_code_agent, force=False)
+
+        # Verify success (should proceed since get failed)
+        assert result.success
+        assert "Claude CLI" in result.changes_made
+
+    def test_backward_compatibility_claude_desktop(
+        self, installer, claude_desktop_agent, tmp_path
+    ):
+        """Test backward compatibility with Claude Desktop.
+
+        Verifies that Claude Desktop still uses JSON config file method
+        and NOT the CLI method.
+        """
+        # Create config directory
+        claude_desktop_agent.config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Install for Claude Desktop (should use JSON method)
+        with patch("subprocess.run") as mock_run:
+            result = installer.install(claude_desktop_agent)
+
+            # Verify subprocess was NOT called (JSON method doesn't use subprocess)
+            assert not mock_run.called
+
+        # Verify config file was created (JSON method)
+        assert result.success
+        assert claude_desktop_agent.config_path.exists()
+
+        # Verify it's valid JSON config
+        with open(claude_desktop_agent.config_path) as f:
+            config = json.load(f)
+        assert "mcpServers" in config
+        assert "mcp-skillset" in config["mcpServers"]
+
+    @patch("subprocess.run")
+    @patch("shutil.which")
+    def test_claude_cli_routing_based_on_agent_id(
+        self, mock_which, mock_run, installer, claude_code_agent, claude_desktop_agent, tmp_path
+    ):
+        """Test that installation method is routed based on agent ID.
+
+        Verifies that:
+        - claude-code uses CLI method
+        - claude-desktop uses JSON method
+        """
+        # Setup for CLI test
+        mock_which.return_value = "/usr/local/bin/claude"
+
+        # Mock get command failure (server doesn't exist), then add success
+        mock_run.side_effect = [
+            Mock(returncode=1, stdout="", stderr="Not found"),  # get fails
+            Mock(returncode=0, stdout="", stderr=""),  # add succeeds
+        ]
+
+        # Install Claude Code (should use CLI)
+        result_code = installer.install(claude_code_agent)
+        assert result_code.success
+        assert mock_run.call_count == 2  # get + add
+
+        # Reset mocks
+        mock_run.reset_mock()
+
+        # Install Claude Desktop (should NOT use CLI)
+        claude_desktop_agent.config_path.parent.mkdir(parents=True, exist_ok=True)
+        result_desktop = installer.install(claude_desktop_agent)
+        assert result_desktop.success
+        assert not mock_run.called  # JSON method doesn't call subprocess
 
 
 class TestCrossPlatformPaths:
