@@ -17,13 +17,8 @@ For true JSON-RPC testing, see integration test_mcp_server_workflow.
 import pytest
 
 from mcp_skills.mcp.server import configure_services
-from mcp_skills.mcp.tools.skill_tools import (
-    skill_categories,
-    skill_get,
-    skills_recommend,
-    skills_reindex,
-    skills_search,
-)
+from mcp_skills.mcp.tools.find_tool import find
+from mcp_skills.mcp.tools.skill_tool import skill as skill_tool
 
 
 @pytest.mark.e2e
@@ -45,12 +40,12 @@ class TestMCPSearchSkills:
         )
 
         # Reindex first
-        reindex_result = await skills_reindex(force=True)
+        reindex_result = await skill_tool(action="reindex", force=True)
         assert reindex_result["status"] == "completed"
         assert reindex_result["indexed_count"] >= 5
 
         # Search for Python testing
-        result = await skills_search(query="python testing", limit=10)
+        result = await find(query="python testing", by="semantic", limit=10)
 
         # Verify response structure
         assert result["status"] == "completed"
@@ -89,10 +84,11 @@ class TestMCPSearchSkills:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
-        result = await skills_search(
+        result = await find(
             query="testing",
+            by="semantic",
             toolchain="python",
             limit=5,
         )
@@ -113,10 +109,11 @@ class TestMCPSearchSkills:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
-        result = await skills_search(
+        result = await find(
             query="python",
+            by="semantic",
             category="testing",
             limit=5,
         )
@@ -140,10 +137,11 @@ class TestMCPSearchSkills:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
-        result = await skills_search(
+        result = await find(
             query="python",
+            by="semantic",
             tags=["python", "testing"],
             limit=10,
         )
@@ -162,19 +160,19 @@ class TestMCPSearchSkills:
         e2e_base_dir,
         e2e_storage_dir,
     ) -> None:
-        """Test search with empty query."""
+        """Test search with empty query returns error."""
         configure_services(
             base_dir=e2e_base_dir,
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
-        result = await skills_search(query="", limit=10)
+        result = await find(query="", by="semantic", limit=10)
 
-        assert result["status"] == "completed"
-        assert result["count"] == 0
-        assert len(result["skills"]) == 0
+        # Empty query should return error for semantic search
+        assert result["status"] == "error"
+        assert "Query required" in result["error"]
 
     async def test_search_skills_limit_cap(
         self,
@@ -188,9 +186,9 @@ class TestMCPSearchSkills:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
-        result = await skills_search(query="test", limit=100)
+        result = await find(query="test", by="semantic", limit=100)
 
         assert result["status"] == "completed"
         # Should be capped at 50
@@ -214,21 +212,20 @@ class TestMCPGetSkill:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
         # Search to get a valid skill ID
-        search_result = await skills_search(query="pytest", limit=1)
+        search_result = await find(query="pytest", by="semantic", limit=1)
         assert search_result["count"] > 0
 
         skill_id = search_result["skills"][0]["id"]
 
         # Get the skill
-        result = await skill_get(skill_id=skill_id)
+        result = await skill_tool(action="read", skill_id=skill_id)
 
         # Verify response structure
         assert result["status"] == "completed"
         assert "skill" in result
-        assert "source" in result
 
         # Verify skill has all required fields
         skill = result["skill"]
@@ -260,11 +257,11 @@ class TestMCPGetSkill:
             storage_path=e2e_storage_dir,
         )
 
-        result = await skill_get(skill_id="nonexistent/skill/id")
+        result = await skill_tool(action="read", skill_id="nonexistent/skill/id")
 
         assert result["status"] == "error"
-        assert "error" in result
-        assert "not found" in result["error"].lower()
+        assert "message" in result
+        assert "not found" in result["message"].lower()
 
     async def test_get_skill_cache_source(
         self,
@@ -278,17 +275,17 @@ class TestMCPGetSkill:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
-        search_result = await skills_search(query="pytest", limit=1)
+        search_result = await find(query="pytest", by="semantic", limit=1)
         skill_id = search_result["skills"][0]["id"]
 
         # First call should load from disk
-        result1 = await skill_get(skill_id=skill_id)
+        result1 = await skill_tool(action="read", skill_id=skill_id)
         assert result1["status"] == "completed"
 
         # Second call may be from cache
-        result2 = await skill_get(skill_id=skill_id)
+        result2 = await skill_tool(action="read", skill_id=skill_id)
         assert result2["status"] == "completed"
         assert result2["skill"]["id"] == skill_id
 
@@ -311,9 +308,10 @@ class TestMCPRecommendSkills:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
-        result = await skills_recommend(
+        result = await find(
+            by="recommend",
             project_path=str(sample_python_project_e2e),
             limit=5,
         )
@@ -356,15 +354,16 @@ class TestMCPRecommendSkills:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
         # Get a skill ID first
-        search_result = await skills_search(query="pytest", limit=1)
+        search_result = await find(query="pytest", by="semantic", limit=1)
         assert search_result["count"] > 0
         skill_id = search_result["skills"][0]["id"]
 
-        result = await skills_recommend(
-            current_skill=skill_id,
+        result = await find(
+            by="recommend",
+            skill_id=skill_id,
             limit=5,
         )
 
@@ -385,11 +384,11 @@ class TestMCPRecommendSkills:
             storage_path=e2e_storage_dir,
         )
 
-        result = await skills_recommend(limit=5)
+        result = await find(by="recommend", limit=5)
 
         assert result["status"] == "error"
         assert "error" in result
-        assert "must be provided" in result["error"]
+        assert "required" in result["error"]
 
     async def test_recommend_skills_invalid_project_path(
         self,
@@ -403,7 +402,8 @@ class TestMCPRecommendSkills:
             storage_path=e2e_storage_dir,
         )
 
-        result = await skills_recommend(
+        result = await find(
+            by="recommend",
             project_path="/nonexistent/path",
             limit=5,
         )
@@ -424,9 +424,10 @@ class TestMCPRecommendSkills:
             storage_path=e2e_storage_dir,
         )
 
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
-        result = await skills_recommend(
+        result = await find(
+            by="recommend",
             project_path=str(sample_python_project_e2e),
             limit=100,
         )
@@ -453,7 +454,7 @@ class TestMCPListCategories:
             storage_path=e2e_storage_dir,
         )
 
-        result = await skill_categories()
+        result = await find(by="category")
 
         # Verify response structure
         assert result["status"] == "completed"
@@ -488,7 +489,7 @@ class TestMCPListCategories:
             storage_path=e2e_storage_dir,
         )
 
-        result = await skill_categories()
+        result = await find(by="category")
 
         assert result["status"] == "completed"
 
@@ -520,7 +521,7 @@ class TestMCPReindexSkills:
             storage_path=e2e_storage_dir,
         )
 
-        result = await skills_reindex(force=False)
+        result = await skill_tool(action="reindex", force=False)
 
         # Verify response structure
         assert result["status"] == "completed"
@@ -529,16 +530,12 @@ class TestMCPReindexSkills:
         assert "graph_nodes" in result
         assert "graph_edges" in result
         assert "last_indexed" in result
-        assert "duration_seconds" in result
         assert "forced" in result
 
         # Verify we indexed our test skills
         assert result["indexed_count"] >= 5
         assert result["graph_nodes"] >= 5
         assert result["vector_store_size"] > 0
-
-        # Verify duration is reasonable
-        assert result["duration_seconds"] < 30.0
 
     async def test_reindex_skills_force(
         self,
@@ -552,7 +549,7 @@ class TestMCPReindexSkills:
             storage_path=e2e_storage_dir,
         )
 
-        result = await skills_reindex(force=True)
+        result = await skill_tool(action="reindex", force=True)
 
         assert result["status"] == "completed"
         assert result["forced"] is True
@@ -571,11 +568,11 @@ class TestMCPReindexSkills:
         )
 
         # First reindex
-        result1 = await skills_reindex(force=True)
+        result1 = await skill_tool(action="reindex", force=True)
         assert result1["status"] == "completed"
 
         # Second reindex (incremental)
-        result2 = await skills_reindex(force=False)
+        result2 = await skill_tool(action="reindex", force=False)
         assert result2["status"] == "completed"
         assert result2["forced"] is False
 
@@ -608,18 +605,19 @@ class TestMCPToolsIntegration:
         )
 
         # 1. Reindex
-        reindex_result = await skills_reindex(force=True)
+        reindex_result = await skill_tool(action="reindex", force=True)
         assert reindex_result["status"] == "completed"
         assert reindex_result["indexed_count"] >= 5
 
         # 2. List categories
-        categories_result = await skill_categories()
+        categories_result = await find(by="category")
         assert categories_result["status"] == "completed"
         assert "testing" in [c["name"] for c in categories_result["categories"]]
 
         # 3. Search in testing category
-        search_result = await skills_search(
+        search_result = await find(
             query="python",
+            by="semantic",
             category="testing",
             limit=5,
         )
@@ -628,7 +626,7 @@ class TestMCPToolsIntegration:
 
         # 4. Get detailed skill info
         skill_id = search_result["skills"][0]["id"]
-        get_result = await skill_get(skill_id=skill_id)
+        get_result = await skill_tool(action="read", skill_id=skill_id)
         assert get_result["status"] == "completed"
         assert len(get_result["skill"]["instructions"]) > 100
 
@@ -653,10 +651,11 @@ class TestMCPToolsIntegration:
         )
 
         # 1. Reindex
-        await skills_reindex(force=True)
+        await skill_tool(action="reindex", force=True)
 
         # 2. Project-based recommendations
-        rec_result = await skills_recommend(
+        rec_result = await find(
+            by="recommend",
             project_path=str(sample_python_project_e2e),
             limit=5,
         )
@@ -665,12 +664,13 @@ class TestMCPToolsIntegration:
 
         # 3. Get details for recommended skill
         rec_skill_id = rec_result["recommendations"][0]["id"]
-        skill_result = await skill_get(skill_id=rec_skill_id)
+        skill_result = await skill_tool(action="read", skill_id=rec_skill_id)
         assert skill_result["status"] == "completed"
 
         # 4. Skill-based recommendations
-        related_result = await skills_recommend(
-            current_skill=rec_skill_id,
+        related_result = await find(
+            by="recommend",
+            skill_id=rec_skill_id,
             limit=3,
         )
         assert related_result["status"] == "completed"

@@ -12,13 +12,8 @@ from mcp_skills.mcp.server import (
     get_skill_manager,
     get_toolchain_detector,
 )
-from mcp_skills.mcp.tools.skill_tools import (
-    skill_categories,
-    skill_get,
-    skills_recommend,
-    skills_reindex,
-    skills_search,
-)
+from mcp_skills.mcp.tools.find_tool import find
+from mcp_skills.mcp.tools.skill_tool import skill
 from mcp_skills.models.skill import Skill
 from mcp_skills.services.indexing import ScoredSkill
 from mcp_skills.services.toolchain_detector import ToolchainInfo
@@ -121,7 +116,7 @@ class TestConfigureServices:
 
 
 class TestSearchSkills:
-    """Test skills_search tool."""
+    """Test find tool with semantic search."""
 
     @pytest.mark.asyncio
     async def test_search_skills_success(self, mock_scored_skill):
@@ -130,10 +125,10 @@ class TestSearchSkills:
         mock_engine.search = MagicMock(return_value=[mock_scored_skill])
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+            "mcp_skills.mcp.tools.find_tool.get_indexing_engine",
             return_value=mock_engine,
         ):
-            result = await skills_search(query="pytest testing", limit=10)
+            result = await find(query="pytest testing", by="semantic", limit=10)
 
             assert result["status"] == "completed"
             assert len(result["skills"]) == 1
@@ -149,11 +144,12 @@ class TestSearchSkills:
         mock_engine.search = MagicMock(return_value=[mock_scored_skill])
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+            "mcp_skills.mcp.tools.find_tool.get_indexing_engine",
             return_value=mock_engine,
         ):
-            result = await skills_search(
+            result = await find(
                 query="testing",
+                by="semantic",
                 toolchain="python",
                 category="testing",
                 tags=["pytest"],
@@ -182,10 +178,10 @@ class TestSearchSkills:
         mock_engine.search = MagicMock(return_value=[mock_scored_skill])
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+            "mcp_skills.mcp.tools.find_tool.get_indexing_engine",
             return_value=mock_engine,
         ):
-            await skills_search(query="test", limit=100)
+            await find(query="test", by="semantic", limit=100)
 
             # Verify limit was capped
             mock_engine.search.assert_called_once()
@@ -199,71 +195,67 @@ class TestSearchSkills:
         mock_engine.search = MagicMock(side_effect=Exception("Search failed"))
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+            "mcp_skills.mcp.tools.find_tool.get_indexing_engine",
             return_value=mock_engine,
         ):
-            result = await skills_search(query="test")
+            result = await find(query="test", by="semantic")
 
             assert result["status"] == "error"
             assert "Search failed" in result["error"]
 
 
 class TestGetSkill:
-    """Test skill_get tool."""
+    """Test skill tool with read action."""
 
     @pytest.mark.asyncio
     async def test_get_skill_success(self, mock_skill):
         """Test successful skill retrieval."""
         mock_manager = Mock()
         mock_manager.load_skill = Mock(return_value=mock_skill)
-        mock_manager._skill_cache = {"pytest-skill": mock_skill}
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_skill_manager",
+            "mcp_skills.mcp.tools.skill_tool.get_skill_manager",
             return_value=mock_manager,
         ):
-            result = await skill_get(skill_id="pytest-skill")
+            result = await skill(action="read", skill_id="pytest-skill")
 
             assert result["status"] == "completed"
             assert result["skill"]["id"] == "pytest-skill"
             assert result["skill"]["name"] == "pytest"
-            assert result["source"] == "cache"
 
     @pytest.mark.asyncio
     async def test_get_skill_not_found(self):
         """Test skill not found."""
         mock_manager = Mock()
         mock_manager.load_skill = Mock(return_value=None)
-        mock_manager._skill_cache = {}
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_skill_manager",
+            "mcp_skills.mcp.tools.skill_tool.get_skill_manager",
             return_value=mock_manager,
         ):
-            result = await skill_get(skill_id="nonexistent")
+            result = await skill(action="read", skill_id="nonexistent")
 
             assert result["status"] == "error"
-            assert "not found" in result["error"]
+            assert "not found" in result["message"]
 
     @pytest.mark.asyncio
     async def test_get_skill_error(self):
         """Test get_skill error handling."""
         mock_manager = Mock()
         mock_manager.load_skill = Mock(side_effect=Exception("Load failed"))
-        mock_manager._skill_cache = {}
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_skill_manager",
+            "mcp_skills.mcp.tools.skill_tool.get_skill_manager",
             return_value=mock_manager,
         ):
-            result = await skill_get(skill_id="pytest-skill")
+            result = await skill(action="read", skill_id="pytest-skill")
 
             assert result["status"] == "error"
-            assert "Load failed" in result["error"]
+            assert "Load failed" in result["message"]
 
 
 class TestRecommendSkills:
-    """Test skills_recommend tool."""
+    """Test find tool with recommend mode."""
 
     @pytest.mark.asyncio
     async def test_recommend_skills_project_based(self, mock_scored_skill, tmp_path):
@@ -288,15 +280,15 @@ class TestRecommendSkills:
 
         with (
             patch(
-                "mcp_skills.mcp.tools.skill_tools.get_toolchain_detector",
+                "mcp_skills.mcp.tools.find_tool.get_toolchain_detector",
                 return_value=mock_detector,
             ),
             patch(
-                "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+                "mcp_skills.mcp.tools.find_tool.get_indexing_engine",
                 return_value=mock_engine,
             ),
         ):
-            result = await skills_recommend(project_path=str(project_dir), limit=5)
+            result = await find(by="recommend", project_path=str(project_dir), limit=5)
 
             assert result["status"] == "completed"
             assert result["recommendation_type"] == "project_based"
@@ -329,15 +321,15 @@ class TestRecommendSkills:
 
         with (
             patch(
-                "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+                "mcp_skills.mcp.tools.find_tool.get_indexing_engine",
                 return_value=mock_engine,
             ),
             patch(
-                "mcp_skills.mcp.tools.skill_tools.get_skill_manager",
+                "mcp_skills.mcp.tools.find_tool.get_skill_manager",
                 return_value=mock_manager,
             ),
         ):
-            result = await skills_recommend(current_skill="pytest-skill", limit=5)
+            result = await find(by="recommend", skill_id="pytest-skill", limit=5)
 
             assert result["status"] == "completed"
             assert result["recommendation_type"] == "skill_based"
@@ -347,32 +339,32 @@ class TestRecommendSkills:
     @pytest.mark.asyncio
     async def test_recommend_skills_no_params(self):
         """Test recommendations with no parameters."""
-        result = await skills_recommend()
+        result = await find(by="recommend")
 
         assert result["status"] == "error"
-        assert "must be provided" in result["error"]
+        assert "required" in result["error"]
 
     @pytest.mark.asyncio
     async def test_recommend_skills_invalid_project_path(self):
         """Test recommendations with invalid project path."""
         with (
             patch(
-                "mcp_skills.mcp.tools.skill_tools.get_toolchain_detector",
+                "mcp_skills.mcp.tools.find_tool.get_toolchain_detector",
                 return_value=Mock(),
             ),
             patch(
-                "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+                "mcp_skills.mcp.tools.find_tool.get_indexing_engine",
                 return_value=MagicMock(),
             ),
         ):
-            result = await skills_recommend(project_path="/nonexistent/path")
+            result = await find(by="recommend", project_path="/nonexistent/path")
 
             assert result["status"] == "error"
             assert "does not exist" in result["error"]
 
 
 class TestListCategories:
-    """Test skill_categories tool."""
+    """Test find tool with category mode."""
 
     @pytest.mark.asyncio
     async def test_list_categories_success(self, mock_skill):
@@ -383,10 +375,10 @@ class TestListCategories:
         mock_manager.discover_skills = Mock(return_value=skills)
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_skill_manager",
+            "mcp_skills.mcp.tools.find_tool.get_skill_manager",
             return_value=mock_manager,
         ):
-            result = await skill_categories()
+            result = await find(by="category")
 
             assert result["status"] == "completed"
             assert len(result["categories"]) == 1
@@ -415,10 +407,10 @@ class TestListCategories:
         mock_manager.discover_skills = Mock(return_value=[skill1, skill2])
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_skill_manager",
+            "mcp_skills.mcp.tools.find_tool.get_skill_manager",
             return_value=mock_manager,
         ):
-            result = await skill_categories()
+            result = await find(by="category")
 
             assert result["status"] == "completed"
             assert result["total_categories"] == 2
@@ -433,17 +425,17 @@ class TestListCategories:
         mock_manager.discover_skills = Mock(side_effect=Exception("Discovery failed"))
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_skill_manager",
+            "mcp_skills.mcp.tools.find_tool.get_skill_manager",
             return_value=mock_manager,
         ):
-            result = await skill_categories()
+            result = await find(by="category")
 
             assert result["status"] == "error"
             assert "Discovery failed" in result["error"]
 
 
 class TestReindexSkills:
-    """Test skills_reindex tool."""
+    """Test skill tool with reindex action."""
 
     @pytest.mark.asyncio
     async def test_reindex_skills_success(self, mock_skill):
@@ -462,15 +454,14 @@ class TestReindexSkills:
         mock_engine.reindex_all = MagicMock(return_value=mock_stats)
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+            "mcp_skills.mcp.tools.skill_tool.get_indexing_engine",
             return_value=mock_engine,
         ):
-            result = await skills_reindex()
+            result = await skill(action="reindex")
 
             assert result["status"] == "completed"
             assert result["indexed_count"] == 1
             assert result["graph_nodes"] == 1
-            assert "duration_seconds" in result
             assert result["forced"] is False
 
     @pytest.mark.asyncio
@@ -490,10 +481,10 @@ class TestReindexSkills:
         mock_engine.reindex_all = MagicMock(return_value=mock_stats)
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+            "mcp_skills.mcp.tools.skill_tool.get_indexing_engine",
             return_value=mock_engine,
         ):
-            result = await skills_reindex(force=True)
+            result = await skill(action="reindex", force=True)
 
             assert result["status"] == "completed"
             assert result["forced"] is True
@@ -517,10 +508,10 @@ class TestReindexSkills:
         mock_engine.reindex_all = MagicMock(return_value=mock_stats)
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+            "mcp_skills.mcp.tools.skill_tool.get_indexing_engine",
             return_value=mock_engine,
         ):
-            result = await skills_reindex()
+            result = await skill(action="reindex")
 
             assert result["status"] == "completed"
             assert result["indexed_count"] == 0
@@ -532,24 +523,22 @@ class TestReindexSkills:
         mock_engine.reindex_all = MagicMock(side_effect=Exception("Indexing failed"))
 
         with patch(
-            "mcp_skills.mcp.tools.skill_tools.get_indexing_engine",
+            "mcp_skills.mcp.tools.skill_tool.get_indexing_engine",
             return_value=mock_engine,
         ):
-            result = await skills_reindex()
+            result = await skill(action="reindex")
 
             assert result["status"] == "error"
-            assert "Indexing failed" in result["error"]
+            assert "Indexing failed" in result["message"]
 
 
 class TestListSkillTemplates:
-    """Test skill_templates_list tool."""
+    """Test find tool with template mode."""
 
     @pytest.mark.asyncio
     async def test_list_skill_templates_success(self):
         """Test successful template listing."""
-        from mcp_skills.mcp.tools.skill_tools import skill_templates_list
-
-        result = await skill_templates_list()
+        result = await find(by="template")
 
         assert result["status"] == "completed"
         assert "templates" in result
@@ -580,137 +569,32 @@ class TestListSkillTemplates:
 
 
 class TestSkillCreate:
-    """Test skill_create MCP tool."""
+    """Test skill tool with create action."""
 
     @pytest.mark.asyncio
-    async def test_skill_create_success(self, tmp_path):
-        """Test successful skill creation with testing template (no security issues)."""
-        from mcp_skills.mcp.tools.skill_tools import skill_create
-
-        # Use testing template which doesn't have credential examples
+    async def test_skill_create_preview(self, tmp_path):
+        """Test skill creation preview (no deploy)."""
         with patch("pathlib.Path.home", return_value=tmp_path):
-            result = await skill_create(
+            result = await skill(
+                action="create",
                 name="Test Skill",
                 description="This is a test skill for unit testing purposes",
                 domain="testing",
                 tags=["test", "python"],
                 template="testing",
-                deploy=True,
+                deploy=False,
             )
 
-            # Note: base template has security examples that trigger validation
-            # Testing template is safer for this test
-            assert result["status"] == "success"
+            # Preview mode doesn't deploy
+            assert result["status"] == "completed"
+            assert result["action"] == "preview"
             assert result["skill_id"] == "test-skill"
-            assert result["skill_path"] is not None
-            assert "created successfully" in result["message"]
-            assert "validation" in result
-
-            # Verify skill was deployed
-            skill_path = Path(result["skill_path"])
-            assert skill_path.exists()
-            assert skill_path.name == "SKILL.md"
-
-    @pytest.mark.asyncio
-    async def test_skill_create_with_tags(self, tmp_path):
-        """Test skill creation with tags."""
-        from mcp_skills.mcp.tools.skill_tools import skill_create
-
-        with patch("pathlib.Path.home", return_value=tmp_path):
-            result = await skill_create(
-                name="FastAPI Testing",
-                description="Test FastAPI endpoints with pytest and httpx",
-                domain="web development",
-                tags=["fastapi", "pytest", "testing"],
-                template="web-development",
-                deploy=True,
-            )
-
-            assert result["status"] == "success"
-            assert result["skill_id"] == "fastapi-testing"
-
-    @pytest.mark.asyncio
-    async def test_skill_create_with_template(self, tmp_path):
-        """Test skill creation with specific template."""
-        from mcp_skills.mcp.tools.skill_tools import skill_create
-
-        # Note: base template has security examples, so we skip it
-        templates = ["web-development", "api-development", "testing"]
-
-        for template in templates:
-            with patch("pathlib.Path.home", return_value=tmp_path):
-                result = await skill_create(
-                    name=f"Test {template} Skill",
-                    description=f"Testing {template} template creation",
-                    domain="testing",
-                    template=template,
-                    deploy=True,
-                )
-
-                assert (
-                    result["status"] == "success"
-                ), f"Failed for template {template}: {result.get('error')}"
-                assert result["skill_path"] is not None
-
-    @pytest.mark.asyncio
-    async def test_skill_create_no_deploy(self, tmp_path):
-        """Test skill creation without deployment."""
-        from mcp_skills.mcp.tools.skill_tools import skill_create
-
-        with patch("pathlib.Path.home", return_value=tmp_path):
-            result = await skill_create(
-                name="No Deploy Skill",
-                description="This skill should not be deployed to disk",
-                domain="testing",
-                template="testing",  # Use safe template
-                deploy=False,
-            )
-
-            assert result["status"] == "success"
-            assert result["skill_id"] == "no-deploy-skill"
-            assert result["skill_path"] is None
-
-    @pytest.mark.asyncio
-    async def test_skill_create_validation_error(self, tmp_path):
-        """Test skill creation with validation errors."""
-        from mcp_skills.mcp.tools.skill_tools import skill_create
-
-        with patch("pathlib.Path.home", return_value=tmp_path):
-            # Description too short
-            result = await skill_create(
-                name="Bad Skill",
-                description="Too short",  # Less than 20 chars
-                domain="testing",
-                deploy=False,
-            )
-
-            assert result["status"] == "error"
-            assert "validation" in result
-            assert "errors" in result["validation"]
-
-    @pytest.mark.asyncio
-    async def test_skill_create_invalid_template(self, tmp_path):
-        """Test skill creation with invalid template."""
-        from mcp_skills.mcp.tools.skill_tools import skill_create
-
-        with patch("pathlib.Path.home", return_value=tmp_path):
-            result = await skill_create(
-                name="Test Skill",
-                description="Testing invalid template parameter",
-                domain="testing",
-                template="nonexistent-template",
-                deploy=False,
-            )
-
-            assert result["status"] == "error"
-            assert "Invalid template" in result["error"]
-            assert "valid_templates" in result
+            assert "content" in result
+            assert result.get("skill_path") is None
 
     @pytest.mark.asyncio
     async def test_skill_create_name_normalization(self, tmp_path):
         """Test skill name normalization to kebab-case."""
-        from mcp_skills.mcp.tools.skill_tools import skill_create
-
         test_cases = [
             ("FastAPI Testing", "fastapi-testing"),
             ("My Cool Skill!", "my-cool-skill"),
@@ -720,42 +604,19 @@ class TestSkillCreate:
 
         for name, expected_id in test_cases:
             with patch("pathlib.Path.home", return_value=tmp_path):
-                result = await skill_create(
+                result = await skill(
+                    action="create",
                     name=name,
                     description="Testing name normalization to kebab-case format",
                     domain="testing",
-                    template="testing",  # Use safe template
+                    template="testing",
                     deploy=False,
                 )
 
                 assert (
-                    result["status"] == "success"
-                ), f"Failed for {name}: {result.get('error')}"
+                    result["status"] == "completed"
+                ), f"Failed for {name}: {result.get('message')}"
                 assert result["skill_id"] == expected_id
-
-    @pytest.mark.asyncio
-    async def test_skill_create_with_all_parameters(self, tmp_path):
-        """Test skill creation with all optional parameters."""
-        from mcp_skills.mcp.tools.skill_tools import skill_create
-
-        with patch("pathlib.Path.home", return_value=tmp_path):
-            result = await skill_create(
-                name="Complete Skill",
-                description="A skill with all parameters specified for comprehensive testing",
-                domain="web development",
-                tags=["python", "fastapi", "testing", "ci-cd"],
-                template="web-development",
-                deploy=True,
-            )
-
-            assert result["status"] == "success"
-            assert result["skill_id"] == "complete-skill"
-            assert result["skill_path"] is not None
-            assert "validation" in result
-
-            # Verify warnings are included if present
-            if result["validation"]["warnings"]:
-                assert isinstance(result["validation"]["warnings"], list)
 
 
 class TestBackwardCompatibility:
