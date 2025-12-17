@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+#
+# mcp-skillset-dev - Development runner for mcp-skillset
+#
+# Runs the CLI or MCP server from source with virtual environment.
+#
+# Usage:
+#   ./mcp-skillset-dev [command] [args...]
+#
+# Examples:
+#   ./mcp-skillset-dev --help              # Show CLI help
+#   ./mcp-skillset-dev search "pytest"     # Search skills
+#   ./mcp-skillset-dev mcp                 # Start MCP server
+#   ./mcp-skillset-dev mcp --stdio         # Start MCP server in stdio mode
+#   ./mcp-skillset-dev index               # Index skills
+#   ./mcp-skillset-dev recommend           # Get recommendations
+#
+# Environment:
+#   MCP_SKILLSET_DEBUG=1    Enable debug logging
+#   MCP_SKILLSET_CONFIG     Path to config file
+#
+
+set -euo pipefail
+
+# Script directory (where this script lives)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log_info() {
+    echo -e "${BLUE}[mcp-skillset-dev]${NC} $*" >&2
+}
+
+log_success() {
+    echo -e "${GREEN}[mcp-skillset-dev]${NC} $*" >&2
+}
+
+log_warn() {
+    echo -e "${YELLOW}[mcp-skillset-dev]${NC} $*" >&2
+}
+
+log_error() {
+    echo -e "${RED}[mcp-skillset-dev]${NC} $*" >&2
+}
+
+# Check if we're in the project directory
+if [[ ! -f "${SCRIPT_DIR}/pyproject.toml" ]]; then
+    log_error "Must be run from mcp-skillset project directory"
+    exit 1
+fi
+
+cd "${SCRIPT_DIR}"
+
+# Determine virtual environment path
+VENV_DIR="${SCRIPT_DIR}/.venv"
+
+# Check for uv (preferred) or fall back to pip
+USE_UV=false
+if command -v uv &> /dev/null; then
+    USE_UV=true
+fi
+
+# Create virtual environment if it doesn't exist
+setup_venv() {
+    if [[ ! -d "${VENV_DIR}" ]]; then
+        log_info "Creating virtual environment..."
+        if $USE_UV; then
+            uv venv "${VENV_DIR}"
+        else
+            python3 -m venv "${VENV_DIR}"
+        fi
+        log_success "Virtual environment created at ${VENV_DIR}"
+    fi
+}
+
+# Activate virtual environment
+activate_venv() {
+    # shellcheck source=/dev/null
+    source "${VENV_DIR}/bin/activate"
+}
+
+# Install dependencies if needed
+install_deps() {
+    # Check if package is installed in development mode
+    if ! python -c "import mcp_skills" &> /dev/null; then
+        log_info "Installing mcp-skillset in development mode..."
+        if $USE_UV; then
+            uv pip install -e ".[dev]"
+        else
+            pip install -e ".[dev]"
+        fi
+        log_success "Dependencies installed"
+    fi
+}
+
+# Main execution
+main() {
+    # Handle special dev commands
+    case "${1:-}" in
+        --setup)
+            # Force setup/reinstall
+            setup_venv
+            activate_venv
+            log_info "Reinstalling dependencies..."
+            if $USE_UV; then
+                uv pip install -e ".[dev]"
+            else
+                pip install -e ".[dev]"
+            fi
+            log_success "Setup complete!"
+            exit 0
+            ;;
+        --shell)
+            # Drop into an interactive shell with venv activated
+            setup_venv
+            activate_venv
+            install_deps
+            log_success "Entering development shell..."
+            log_info "Run 'mcp-skillset --help' to see available commands"
+            exec "${SHELL:-/bin/bash}"
+            ;;
+        --test)
+            # Run tests
+            setup_venv
+            activate_venv
+            install_deps
+            shift
+            log_info "Running tests..."
+            exec pytest "${@:---tb=short}"
+            ;;
+        --mcp-inspect)
+            # Inspect MCP tools (useful for debugging)
+            setup_venv
+            activate_venv
+            install_deps
+            log_info "Inspecting MCP tools..."
+            python -c "
+from mcp_skills.mcp.tools.find_tool import find
+from mcp_skills.mcp.tools.skill_tool import skill
+import inspect
+
+print('=== MCP Tools Available ===')
+print()
+print('find() - Unified discovery tool')
+sig = inspect.signature(find)
+print(f'  Signature: find{sig}')
+print('  Search modes (by parameter):')
+print('    semantic  - Vector + graph hybrid search (default)')
+print('    graph     - Knowledge graph traversal only')
+print('    category  - List/filter by category')
+print('    template  - List available templates')
+print('    recommend - Get recommendations')
+print()
+print('skill() - Unified CRUD tool with git workflow')
+sig = inspect.signature(skill)
+print(f'  Signature: skill{sig}')
+print('  Actions:')
+print('    read    - Get skill details')
+print('    create  - Create new skill (git push/PR)')
+print('    update  - Modify skill (git push/PR)')
+print('    delete  - Remove skill (git push/PR)')
+print('    reindex - Rebuild search indices')
+print()
+print('Git Authorization:')
+print('  bobmatnyc@* -> Direct push to bobmatnyc/claude-mpm-skills')
+print('  Others      -> Create PR automatically')
+"
+            exit 0
+            ;;
+        --version)
+            setup_venv
+            activate_venv
+            install_deps
+            python -c "from mcp_skills import __version__; print(f'mcp-skillset {__version__} (dev)')"
+            exit 0
+            ;;
+        --help|-h)
+            if [[ "${2:-}" == "dev" ]]; then
+                # Show dev-specific help
+                cat << 'EOF'
+mcp-skillset-dev - Development runner
+
+Dev Commands:
+  --setup          Force reinstall dependencies
+  --shell          Enter interactive development shell
+  --test [args]    Run pytest with optional args
+  --mcp-inspect    Show MCP tool signatures
+  --version        Show version
+  --help dev       Show this dev help
+
+All other arguments are passed to mcp-skillset CLI.
+
+Examples:
+  ./mcp-skillset-dev --setup              # Reinstall deps
+  ./mcp-skillset-dev --shell              # Interactive shell
+  ./mcp-skillset-dev --test -v            # Run tests verbose
+  ./mcp-skillset-dev search "pytest"      # Search skills
+  ./mcp-skillset-dev mcp --stdio          # Start MCP server
+EOF
+                exit 0
+            fi
+            # Fall through to show CLI help
+            ;;
+    esac
+
+    # Standard execution - run CLI
+    setup_venv
+    activate_venv
+    install_deps
+
+    # Enable debug mode if requested
+    if [[ "${MCP_SKILLSET_DEBUG:-}" == "1" ]]; then
+        export PYTHONPATH="${SCRIPT_DIR}/src:${PYTHONPATH:-}"
+        log_info "Debug mode enabled"
+    fi
+
+    # Run the CLI
+    if [[ $# -eq 0 ]]; then
+        # No args - show help
+        exec python -m mcp_skills.cli.main --help
+    else
+        exec python -m mcp_skills.cli.main "$@"
+    fi
+}
+
+main "$@"
