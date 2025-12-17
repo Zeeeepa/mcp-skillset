@@ -86,11 +86,6 @@ class RepositoryManager:
             "license": "Apache-2.0",
         },
         {
-            "url": "https://github.com/Prat011/awesome-llm-skills.git",
-            "priority": 85,
-            "license": "Apache-2.0",
-        },
-        {
             "url": "https://github.com/bobmatnyc/claude-mpm-skills.git",
             "priority": 80,
             "license": "MIT",
@@ -312,22 +307,27 @@ class RepositoryManager:
         - InvalidGitRepositoryError: Local clone is corrupted
 
         Recovery Strategy:
-        - Pull failures are propagated to caller for explicit handling
-        - Consider re-cloning if local repository is corrupted
-        - No automatic conflict resolution (user must handle manually)
+        - Skill repos are read-only, so we fetch and hard reset to origin
+        - This handles local changes and divergent branches automatically
+        - If local repository is corrupted, consider re-cloning
         """
         # 1. Find repository by ID
         repository = self.get_repository(repo_id)
         if not repository:
             raise ValueError(f"Repository not found: {repo_id}")
 
-        # 2. Git pull latest changes
+        # 2. Git fetch and reset to origin (skill repos are read-only)
         logger.info(f"Updating repository {repo_id} from {repository.url}")
 
         try:
             repo = git.Repo(repository.local_path)
             origin = repo.remotes.origin
-            origin.pull()
+            # Fetch latest from origin
+            origin.fetch()
+            # Get the default branch (usually main or master)
+            default_branch = repo.active_branch.name
+            # Hard reset to origin - discards any local changes
+            repo.head.reset(f"origin/{default_branch}", index=True, working_tree=True)
         except git.exc.InvalidGitRepositoryError as e:
             raise ValueError(
                 f"Local repository is corrupted: {repository.local_path}. "
@@ -372,26 +372,31 @@ class RepositoryManager:
         - InvalidGitRepositoryError: Local clone is corrupted
 
         Recovery Strategy:
-        - Pull failures are propagated to caller for explicit handling
-        - Consider re-cloning if local repository is corrupted
-        - No automatic conflict resolution (user must handle manually)
+        - Skill repos are read-only, so we fetch and hard reset to origin
+        - This handles local changes and divergent branches automatically
+        - If local repository is corrupted, consider re-cloning
         """
         # 1. Find repository by ID
         repository = self.get_repository(repo_id)
         if not repository:
             raise ValueError(f"Repository not found: {repo_id}")
 
-        # 2. Git pull latest changes with progress tracking
+        # 2. Git fetch and reset to origin (skill repos are read-only)
         logger.info(f"Updating repository {repo_id} from {repository.url}")
 
         try:
             repo = git.Repo(repository.local_path)
             origin = repo.remotes.origin
+            # Fetch latest from origin with optional progress
             if progress_callback:
                 progress_handler = CloneProgress(progress_callback)
-                origin.pull(progress=progress_handler)
+                origin.fetch(progress=progress_handler)
             else:
-                origin.pull()
+                origin.fetch()
+            # Get the default branch (usually main or master)
+            default_branch = repo.active_branch.name
+            # Hard reset to origin - discards any local changes
+            repo.head.reset(f"origin/{default_branch}", index=True, working_tree=True)
         except git.exc.InvalidGitRepositoryError as e:
             raise ValueError(
                 f"Local repository is corrupted: {repository.local_path}. "

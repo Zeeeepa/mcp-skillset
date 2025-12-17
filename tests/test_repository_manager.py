@@ -227,7 +227,7 @@ class TestRepositoryManager:
     def test_update_repository_pulls_changes(
         self, mock_clone: MagicMock, mock_repo_class: MagicMock, tmp_path: Path
     ) -> None:
-        """Test update_repository pulls latest changes."""
+        """Test update_repository fetches and resets to origin."""
         manager = RepositoryManager(base_dir=tmp_path / "repos")
 
         # Add repository
@@ -242,6 +242,7 @@ class TestRepositoryManager:
         mock_repo_instance = MagicMock()
         mock_origin = MagicMock()
         mock_repo_instance.remotes.origin = mock_origin
+        mock_repo_instance.active_branch.name = "main"
         mock_repo_class.return_value = mock_repo_instance
 
         # Add new skill file to simulate changes
@@ -251,8 +252,11 @@ class TestRepositoryManager:
         # Update repository
         updated = manager.update_repository("test/repo")
 
-        # Verify pull was called
-        mock_origin.pull.assert_called_once()
+        # Verify fetch was called and reset to origin
+        mock_origin.fetch.assert_called_once()
+        mock_repo_instance.head.reset.assert_called_once_with(
+            "origin/main", index=True, working_tree=True
+        )
 
         # Verify skill count updated
         assert updated.skill_count == 2
@@ -266,10 +270,10 @@ class TestRepositoryManager:
 
     @patch("git.Repo")
     @patch("git.Repo.clone_from")
-    def test_update_repository_handles_pull_failure(
+    def test_update_repository_handles_fetch_failure(
         self, mock_clone: MagicMock, mock_repo_class: MagicMock, tmp_path: Path
     ) -> None:
-        """Test update_repository handles git pull failures."""
+        """Test update_repository handles git fetch failures."""
         manager = RepositoryManager(base_dir=tmp_path / "repos")
 
         # Add repository
@@ -279,11 +283,11 @@ class TestRepositoryManager:
             url="https://github.com/test/repo.git", priority=50, license="MIT"
         )
 
-        # Mock git pull failure
+        # Mock git fetch failure
         mock_repo_instance = MagicMock()
         mock_origin = MagicMock()
-        mock_origin.pull.side_effect = git.exc.GitCommandError(
-            "pull", "fatal: unable to access repository"
+        mock_origin.fetch.side_effect = git.exc.GitCommandError(
+            "fetch", "fatal: unable to access repository"
         )
         mock_repo_instance.remotes.origin = mock_origin
         mock_repo_class.return_value = mock_repo_instance
