@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 
 # Disable tokenizers parallelism to avoid fork warnings
 # Must be set before any HuggingFace tokenizers are loaded
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# Configure logging to suppress noisy messages during CLI usage
+# Only show WARNING and above for third-party libs, ERROR for our services
+# Users can enable verbose output with MCP_SKILLSET_DEBUG=1
+if os.environ.get("MCP_SKILLSET_DEBUG") == "1":
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    # Suppress most log output for clean CLI experience
+    logging.basicConfig(level=logging.CRITICAL)
+    # Allow warnings for critical issues only
+    logging.getLogger("mcp_skills").setLevel(logging.CRITICAL)
 
 import click
 

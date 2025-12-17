@@ -69,44 +69,24 @@ def get_skills_repo_path() -> Path:
 async def skill(
     action: str,
     skill_id: str | None = None,
-    name: str | None = None,
-    description: str | None = None,
-    domain: str | None = None,
-    tags: list[str] | None = None,
-    template: str = "base",
-    content: str | None = None,
-    deploy: bool = True,
-    commit_message: str | None = None,
     force: bool = False,
 ) -> dict[str, Any]:
-    """Perform skill CRUD operations with git-based authorization.
+    """Perform skill read operations.
 
     Actions:
     - read: Get complete skill details
-    - create: Create new skill from template
-    - update: Modify existing skill
-    - delete: Remove skill
     - reindex: Rebuild search indices
 
-    Write operations (create/update/delete) use git workflow:
-    - Authorized users (bobmatnyc): Direct push to main
-    - Others: Create PR for review
+    Note: Write operations (create/update/delete) are available via CLI only.
+    Use `mcp-skillset build-skill` for creating skills.
 
     Args:
-        action: Operation to perform (read|create|update|delete|reindex)
-        skill_id: Skill ID for read/update/delete
-        name: Skill name for create
-        description: Skill description for create/update
-        domain: Domain area for create
-        tags: Tags for create/update
-        template: Template for create (default: base)
-        content: Full SKILL.md content for update
-        deploy: Deploy to skills repo (default: True)
-        commit_message: Git commit message for write operations
+        action: Operation to perform (read|reindex)
+        skill_id: Skill ID for read
         force: Force reindex even if up-to-date
 
     Returns:
-        Dict with status, result data, and git workflow info
+        Dict with status and result data
 
     Examples:
         >>> # Read skill
@@ -115,30 +95,6 @@ async def skill(
             "status": "completed",
             "skill": {"id": "pytest-skill", "name": "pytest", ...}
         }
-
-        >>> # Create skill
-        >>> skill(
-        ...     action="create",
-        ...     name="FastAPI Testing",
-        ...     description="Test FastAPI endpoints with pytest",
-        ...     domain="web development",
-        ...     tags=["fastapi", "pytest"]
-        ... )
-        {
-            "status": "completed",
-            "skill_id": "fastapi-testing",
-            "git_status": "pushed"
-        }
-
-        >>> # Update skill
-        >>> skill(
-        ...     action="update",
-        ...     skill_id="pytest-skill",
-        ...     description="Updated description"
-        ... )
-
-        >>> # Delete skill
-        >>> skill(action="delete", skill_id="old-skill")
 
         >>> # Reindex all skills
         >>> skill(action="reindex", force=True)
@@ -150,35 +106,21 @@ async def skill(
                 return {"status": "error", "message": "skill_id required for read"}
             return await _read_skill(skill_id)
 
-        elif action == "create":
-            if not all([name, description, domain]):
-                return {
-                    "status": "error",
-                    "message": "name, description, and domain required for create",
-                }
-            return await _create_skill(
-                name, description, domain, tags, template, deploy, commit_message
-            )
-
-        elif action == "update":
-            if not skill_id:
-                return {"status": "error", "message": "skill_id required for update"}
-            return await _update_skill(
-                skill_id, description, tags, content, commit_message
-            )
-
-        elif action == "delete":
-            if not skill_id:
-                return {"status": "error", "message": "skill_id required for delete"}
-            return await _delete_skill(skill_id, commit_message)
-
         elif action == "reindex":
             return await _reindex_skills(force)
+
+        elif action in ("create", "update", "delete"):
+            return {
+                "status": "error",
+                "message": f"Action '{action}' is not available via MCP. "
+                "Use CLI instead: `mcp-skillset build-skill` for create, "
+                "or edit skill files directly for update/delete.",
+            }
 
         else:
             return {
                 "status": "error",
-                "message": f"Unknown action: {action}. Valid: read|create|update|delete|reindex",
+                "message": f"Unknown action: {action}. Valid: read|reindex",
             }
 
     except Exception as e:

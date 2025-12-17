@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-import click
+import sys
 
-from mcp_skills.cli.shared.console import console
+import click
+from rich.console import Console
+
+
+# Create stderr console for MCP mode - stdout must be reserved for JSON-RPC
+stderr_console = Console(stderr=True, force_terminal=True)
 
 
 @click.command(name="mcp")
@@ -19,12 +24,16 @@ def mcp(dev: bool) -> None:
         mcp-skillset mcp
 
     The server will run in stdio mode and communicate with Claude Code.
+
+    IMPORTANT: All output goes to stderr to preserve stdout for JSON-RPC protocol.
     """
-    console.print("🚀 [bold green]Starting MCP server for Claude Code...[/bold green]")
-    console.print("📡 stdio transport")
+    stderr_console.print(
+        "🚀 [bold green]Starting MCP server for Claude Code...[/bold green]"
+    )
+    stderr_console.print("📡 stdio transport")
 
     if dev:
-        console.print("🔧 [yellow]Development mode enabled[/yellow]")
+        stderr_console.print("🔧 [yellow]Development mode enabled[/yellow]")
 
     # Import and configure MCP server
     from mcp_skills.mcp.server import configure_services
@@ -32,22 +41,22 @@ def mcp(dev: bool) -> None:
 
     try:
         # Initialize services (SkillManager, IndexingEngine, ToolchainDetector, RepositoryManager)
-        console.print("⚙️  Configuring services...")
+        stderr_console.print("⚙️  Configuring services...")
         configure_services()
 
-        console.print("✅ Services configured")
-        console.print("📡 stdio transport active")
-        console.print("🎯 Ready for Claude Code connection\n")
+        stderr_console.print("✅ Services configured")
+        stderr_console.print("📡 stdio transport active")
+        stderr_console.print("🎯 Ready for Claude Code connection\n")
 
         # Start FastMCP server (blocks until terminated)
         mcp_main()
     except KeyboardInterrupt:
-        console.print("\n[yellow]⚠️  Server stopped by user[/yellow]")
+        stderr_console.print("\n[yellow]⚠️  Server stopped by user[/yellow]")
         raise SystemExit(0)
     except Exception as e:
-        console.print(f"\n[red]❌ Server failed to start: {e}[/red]")
+        stderr_console.print(f"\n[red]❌ Server failed to start: {e}[/red]")
         import traceback
 
         if dev:
-            traceback.print_exc()
+            traceback.print_exc(file=sys.stderr)
         raise SystemExit(1)

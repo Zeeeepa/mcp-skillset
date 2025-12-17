@@ -18,6 +18,14 @@
       "args": [
         "mcp"
       ]
+    },
+    "mcp-skillset": {
+      "type": "stdio",
+      "command": "/Users/masa/Projects/mcp-skillset/mcp-skillset-dev",
+      "args": [
+        "mcp"
+      ],
+      "env": {}
     }
   }
 }

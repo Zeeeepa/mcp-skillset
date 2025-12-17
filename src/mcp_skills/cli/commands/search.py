@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import click
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from mcp_skills.cli.shared.console import console
@@ -52,9 +53,6 @@ def search(
     console.print()
 
     try:
-        # Initialize services with config
-        skill_manager = SkillManager()
-
         # Load config and optionally override with CLI flag
         config = MCPSkillsConfig()
         if search_mode:
@@ -66,10 +64,24 @@ def search(
                 f"graph={config.hybrid_search.graph_weight:.1f}[/dim]\n"
             )
 
-        indexing_engine = IndexingEngine(skill_manager=skill_manager, config=config)
+        # Initialize services and perform search with progress indicator
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,  # Remove spinner after completion
+        ) as progress:
+            task = progress.add_task("Loading skills index...", total=None)
 
-        # Perform search
-        results = indexing_engine.search(query, category=category, top_k=limit)
+            # Initialize services with config
+            skill_manager = SkillManager()
+            indexing_engine = IndexingEngine(skill_manager=skill_manager, config=config)
+
+            progress.update(task, description="Searching...")
+
+            # Perform search
+            results = indexing_engine.search(query, category=category, top_k=limit)
+            progress.update(task, completed=True)
 
         if not results:
             console.print("[yellow]No results found[/yellow]")
