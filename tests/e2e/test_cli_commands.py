@@ -319,7 +319,9 @@ class TestCLIRecommendCommand:
         from mcp_skills.cli.commands import recommend
 
         monkeypatch.setattr(recommend, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(recommend, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(
+            recommend, "IndexingEngine", lambda **kwargs: indexing_engine
+        )
 
         # Import ToolchainDetector directly to avoid recursion
         from mcp_skills.services.toolchain_detector import ToolchainDetector

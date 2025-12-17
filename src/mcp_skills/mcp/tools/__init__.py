@@ -13,8 +13,10 @@ Legacy Implementation:
 """
 
 # Import all tool modules to register them with FastMCP
-from . import find_tool  # noqa: F401
-from . import skill_tool  # noqa: F401
+from . import (
+    find_tool,  # noqa: F401
+    skill_tool,  # noqa: F401
+)
 
 
 __all__ = ["find_tool", "skill_tool"]

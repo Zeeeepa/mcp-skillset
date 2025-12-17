@@ -38,6 +38,7 @@ from ..server import (
     mcp,
 )
 
+
 logger = logging.getLogger(__name__)
 
 # Templates available for skill creation
@@ -186,7 +187,13 @@ async def find(
             return {
                 "status": "error",
                 "error": f"Invalid search method '{by}'. Must be one of: semantic, graph, category, template, recommend",
-                "valid_methods": ["semantic", "graph", "category", "template", "recommend"],
+                "valid_methods": [
+                    "semantic",
+                    "graph",
+                    "category",
+                    "template",
+                    "recommend",
+                ],
             }
 
     except Exception as e:
@@ -208,9 +215,7 @@ def _handle_template_list() -> dict[str, Any]:
     }
 
 
-async def _handle_category_search(
-    category: str | None, limit: int
-) -> dict[str, Any]:
+async def _handle_category_search(category: str | None, limit: int) -> dict[str, Any]:
     """Handle category listing or filtering.
 
     Args:
@@ -413,7 +418,9 @@ async def _recommend_for_project(project_path: str, limit: int) -> dict[str, Any
         }
 
     # Build query from detected toolchains
-    all_languages = [toolchain_info.primary_language] + toolchain_info.secondary_languages
+    all_languages = [
+        toolchain_info.primary_language
+    ] + toolchain_info.secondary_languages
     frameworks = toolchain_info.frameworks or []
     query = " ".join(all_languages + frameworks)
 

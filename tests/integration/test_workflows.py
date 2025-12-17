@@ -11,15 +11,15 @@ from datetime import UTC
 from pathlib import Path
 
 import pytest
-
-from mcp_skills.mcp.server import configure_services
-from mcp_skills.mcp.tools.skill_tools import (
+from mcp_skills.mcp.tools.skill_tool import (
     skill_categories,
     skill_get,
-    skills_recommend,
-    skills_reindex,
-    skills_search,
+    skill_recommend,
+    skill_reindex,
+    skill_search,
 )
+
+from mcp_skills.mcp.server import configure_services
 from mcp_skills.models.skill import Skill
 from mcp_skills.services.indexing import IndexingEngine
 from mcp_skills.services.repository_manager import RepositoryManager
@@ -261,14 +261,14 @@ class TestMCPServerWorkflow:
         base_dir = populated_repos_dir.parent
         configure_services(base_dir=base_dir, storage_path=temp_storage_dir)
 
-        # 2. Call skills_reindex tool first
-        reindex_result = await skills_reindex(force=True)
+        # 2. Call skill_reindex tool first
+        reindex_result = await skill_reindex(force=True)
         assert reindex_result["status"] == "completed"
         assert reindex_result["indexed_count"] >= 3
         assert reindex_result["graph_nodes"] >= 3
 
-        # 3. Call skills_search tool
-        search_result = await skills_search(query="python testing", limit=5)
+        # 3. Call skill_search tool
+        search_result = await skill_search(query="python testing", limit=5)
         assert search_result["status"] == "completed"
         assert "skills" in search_result
         assert len(search_result["skills"]) > 0
@@ -296,8 +296,8 @@ class TestMCPServerWorkflow:
         assert "testing" in category_names
         assert "architecture" in category_names
 
-        # 6. Call skills_recommend tool (with populated repo dir)
-        recommend_result = await skills_recommend(
+        # 6. Call skill_recommend tool (with populated repo dir)
+        recommend_result = await skill_recommend(
             project_path=str(populated_repos_dir), limit=5
         )
         assert recommend_result["status"] == "completed"
@@ -315,7 +315,7 @@ class TestMCPServerWorkflow:
         assert "error" in error_result
 
         # Test search with invalid parameters
-        search_error = await skills_search(query="", limit=5)
+        search_error = await skill_search(query="", limit=5)
         # Empty query should return empty results, not error
         assert search_error["status"] == "completed"
         assert len(search_error["skills"]) == 0

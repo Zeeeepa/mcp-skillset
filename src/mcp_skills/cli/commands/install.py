@@ -18,17 +18,19 @@ logger = logging.getLogger(__name__)
 @click.command()
 @click.option(
     "--agent",
-    type=click.Choice([
-        "claude-desktop",
-        "claude-code",
-        "auggie",
-        "cursor",
-        "windsurf",
-        "continue",
-        "codex",
-        "gemini-cli",
-        "all",
-    ]),
+    type=click.Choice(
+        [
+            "claude-desktop",
+            "claude-code",
+            "auggie",
+            "cursor",
+            "windsurf",
+            "continue",
+            "codex",
+            "gemini-cli",
+            "all",
+        ]
+    ),
     default="all",
     help="Which agent to install for (default: all except claude-desktop)",
 )

@@ -47,7 +47,11 @@ class TestEnrichCommand:
         )
 
         mock_enricher = Mock()
-        mock_enricher.extract_keywords.return_value = ["write", "test", "authentication"]
+        mock_enricher.extract_keywords.return_value = [
+            "write",
+            "test",
+            "authentication",
+        ]
         mock_enricher.search_skills.return_value = [mock_skill]
         mock_enricher.enrich.return_value = enriched_result
         mock_enricher_cls.return_value = mock_enricher

@@ -118,9 +118,7 @@ AGENT_CONFIGS = [
         config_paths={
             "darwin": Path.home() / ".cursor",
             "win32": (
-                Path.home() / ".cursor"
-                if platform.system() == "Windows"
-                else Path()
+                Path.home() / ".cursor" if platform.system() == "Windows" else Path()
             ),
             "linux": Path.home() / ".cursor",
         },
@@ -146,9 +144,7 @@ AGENT_CONFIGS = [
         config_paths={
             "darwin": Path.home() / ".continue",
             "win32": (
-                Path.home() / ".continue"
-                if platform.system() == "Windows"
-                else Path()
+                Path.home() / ".continue" if platform.system() == "Windows" else Path()
             ),
             "linux": Path.home() / ".continue",
         },
@@ -160,9 +156,7 @@ AGENT_CONFIGS = [
         config_paths={
             "darwin": Path.home() / ".codex",
             "win32": (
-                Path.home() / ".codex"
-                if platform.system() == "Windows"
-                else Path()
+                Path.home() / ".codex" if platform.system() == "Windows" else Path()
             ),
             "linux": Path.home() / ".codex",
         },
@@ -174,9 +168,7 @@ AGENT_CONFIGS = [
         config_paths={
             "darwin": Path.home() / ".gemini",
             "win32": (
-                Path.home() / ".gemini"
-                if platform.system() == "Windows"
-                else Path()
+                Path.home() / ".gemini" if platform.system() == "Windows" else Path()
             ),
             "linux": Path.home() / ".gemini",
         },

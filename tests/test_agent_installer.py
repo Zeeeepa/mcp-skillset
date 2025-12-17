@@ -11,9 +11,8 @@ Test Coverage:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -56,7 +55,9 @@ class TestAgentDetector:
         agents = detector.detect_all()
 
         assert isinstance(agents, list)
-        assert len(agents) >= 8  # Now support 8 platforms: Claude Desktop, Claude Code, Auggie, Cursor, Windsurf, Continue, Codex, Gemini CLI
+        assert (
+            len(agents) >= 8
+        )  # Now support 8 platforms: Claude Desktop, Claude Code, Auggie, Cursor, Windsurf, Continue, Codex, Gemini CLI
 
         for agent in agents:
             assert isinstance(agent, DetectedAgent)
@@ -124,7 +125,9 @@ class TestAgentInstaller:
         )
 
     @patch("mcp_skills.services.agent_installer.MCPInstaller")
-    def test_install_creates_new_config(self, mock_installer_cls, installer, temp_agent, tmp_path):
+    def test_install_creates_new_config(
+        self, mock_installer_cls, installer, temp_agent, tmp_path
+    ):
         """Test installation creates new config when none exists."""
         # Mock MCPInstaller instance
         mock_installer = Mock()
@@ -235,7 +238,9 @@ class TestClaudeCLIIntegration:
         )
 
     @patch("mcp_skills.services.agent_installer.MCPInstaller")
-    def test_claude_cli_not_found(self, mock_installer_cls, installer, claude_code_agent):
+    def test_claude_cli_not_found(
+        self, mock_installer_cls, installer, claude_code_agent
+    ):
         """Test error when py-mcp-installer fails to initialize.
 
         Verifies that installation fails with clear error message when
@@ -243,6 +248,7 @@ class TestClaudeCLIIntegration:
         """
         # Mock MCPInstaller initialization failure
         from mcp_skills.services.py_mcp_installer_wrapper import PyMCPInstallerError
+
         mock_installer_cls.side_effect = PyMCPInstallerError("Platform not supported")
 
         # Install
@@ -310,9 +316,7 @@ class TestClaudeCLIIntegration:
         mock_installer.install_server.assert_called_once()
 
     @patch("mcp_skills.services.agent_installer.MCPInstaller")
-    def test_claude_cli_dry_run(
-        self, mock_installer_cls, installer, claude_code_agent
-    ):
+    def test_claude_cli_dry_run(self, mock_installer_cls, installer, claude_code_agent):
         """Test dry-run mode.
 
         Verifies that dry-run mode shows what would be done without
@@ -333,7 +337,9 @@ class TestClaudeCLIIntegration:
         # Verify success but no actual execution
         assert result.success
         assert result.changes_made is not None
-        assert "DRY RUN" in result.changes_made or "Would install" in result.changes_made
+        assert (
+            "DRY RUN" in result.changes_made or "Would install" in result.changes_made
+        )
 
         # Verify MCPInstaller was created with dry_run=True
         call_kwargs = mock_installer_cls.call_args[1]
@@ -362,7 +368,9 @@ class TestClaudeCLIIntegration:
 
         # Verify success
         assert result.success
-        assert "DRY RUN" in result.changes_made or "Would reinstall" in result.changes_made
+        assert (
+            "DRY RUN" in result.changes_made or "Would reinstall" in result.changes_made
+        )
 
         # Verify MCPInstaller was created with dry_run=True
         call_kwargs = mock_installer_cls.call_args[1]
@@ -382,6 +390,7 @@ class TestClaudeCLIIntegration:
         """
         # Mock MCPInstaller instance
         from mcp_skills.services.py_mcp_installer_wrapper import PyMCPInstallerError
+
         mock_installer = Mock()
         mock_installer.install_server.side_effect = PyMCPInstallerError(
             "Failed to install server"
@@ -712,4 +721,6 @@ class TestNewPlatforms:
             assert agent.config_path.is_absolute()
             # Config path should contain platform-specific directory
             config_path_str = str(agent.config_path)
-            assert expected_dir in config_path_str, f"Expected '{expected_dir}' in {config_path_str}"
+            assert (
+                expected_dir in config_path_str
+            ), f"Expected '{expected_dir}' in {config_path_str}"

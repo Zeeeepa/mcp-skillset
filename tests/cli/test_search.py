@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from unittest.mock import Mock, patch
 
 import pytest
@@ -104,7 +103,10 @@ class TestSearchCommand:
         mock_config = Mock()
         mock_config_cls.return_value = mock_config
 
-        scored_skills = [ScoredSkill(skill=mock_skill, score=0.9, match_type="hybrid") for _ in range(5)]
+        scored_skills = [
+            ScoredSkill(skill=mock_skill, score=0.9, match_type="hybrid")
+            for _ in range(5)
+        ]
         mock_engine = Mock()
         mock_engine.search.return_value = scored_skills
         mock_engine_cls.return_value = mock_engine
@@ -132,7 +134,9 @@ class TestSearchCommand:
         mock_manager_cls.return_value = mock_manager
 
         mock_config = Mock()
-        mock_config._get_preset = Mock(return_value=Mock(vector_weight=0.9, graph_weight=0.1))
+        mock_config._get_preset = Mock(
+            return_value=Mock(vector_weight=0.9, graph_weight=0.1)
+        )
         mock_config.hybrid_search = Mock(vector_weight=0.7, graph_weight=0.3)
         mock_config_cls.return_value = mock_config
 
@@ -177,7 +181,10 @@ class TestSearchCommand:
         mock_config = Mock()
         mock_config_cls.return_value = mock_config
 
-        scored_skills = [ScoredSkill(skill=mock_skill, score=0.8 - i*0.05, match_type="hybrid") for i in range(10)]
+        scored_skills = [
+            ScoredSkill(skill=mock_skill, score=0.8 - i * 0.05, match_type="hybrid")
+            for i in range(10)
+        ]
         mock_engine = Mock()
         mock_engine.search.return_value = scored_skills
         mock_engine_cls.return_value = mock_engine
@@ -341,7 +348,9 @@ class TestRecommendCommand:
         mock_manager_cls.return_value = mock_manager
 
         mock_config = Mock()
-        mock_config._get_preset = Mock(return_value=Mock(vector_weight=0.5, graph_weight=0.5))
+        mock_config._get_preset = Mock(
+            return_value=Mock(vector_weight=0.5, graph_weight=0.5)
+        )
         mock_config.hybrid_search = Mock(vector_weight=0.5, graph_weight=0.5)
         mock_config_cls.return_value = mock_config
 
@@ -439,7 +448,10 @@ class TestRecommendCommand:
         mock_config = Mock()
         mock_config_cls.return_value = mock_config
 
-        scored_skills = [ScoredSkill(skill=mock_skill, score=0.85 - i*0.1, match_type="hybrid") for i in range(5)]
+        scored_skills = [
+            ScoredSkill(skill=mock_skill, score=0.85 - i * 0.1, match_type="hybrid")
+            for i in range(5)
+        ]
         mock_engine = Mock()
         mock_engine.search.return_value = scored_skills
         mock_engine_cls.return_value = mock_engine

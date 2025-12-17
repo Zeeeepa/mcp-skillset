@@ -15,11 +15,14 @@ Reduced from 656 lines to ~95 lines (85% reduction).
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 
 from .agent_detector import DetectedAgent
 from .py_mcp_installer_wrapper import (
     InstallationResult as PyInstallResult,
+)
+from .py_mcp_installer_wrapper import (
     MCPInstaller,
     Platform,
     PyMCPInstallerError,
@@ -141,11 +144,9 @@ class AgentInstaller:
 
         # Handle force mode by uninstalling first
         if force and not dry_run:
-            try:
+            # Ignore uninstall errors (server may not exist)
+            with contextlib.suppress(PyMCPInstallerError):
                 installer.uninstall_server("mcp-skillset")
-            except PyMCPInstallerError:
-                # Ignore uninstall errors (server may not exist)
-                pass
 
         # Install the server
         try:

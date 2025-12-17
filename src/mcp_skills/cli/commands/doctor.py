@@ -8,7 +8,6 @@ from mcp_skills.cli.shared.console import console
 from mcp_skills.services.indexing.engine import IndexingEngine
 from mcp_skills.services.py_mcp_installer_wrapper import (
     MCPInspector,
-    Platform,
     PlatformDetector,
 )
 from mcp_skills.services.repository_manager import RepositoryManager
@@ -69,9 +68,7 @@ def _run_mcp_diagnostics() -> bool:
                 )
 
                 # Display issues
-                errors = [
-                    issue for issue in report.issues if issue.severity == "error"
-                ]
+                errors = [issue for issue in report.issues if issue.severity == "error"]
                 warnings = [
                     issue for issue in report.issues if issue.severity == "warning"
                 ]
@@ -85,7 +82,9 @@ def _run_mcp_diagnostics() -> bool:
                     all_healthy = False
 
                 if warnings:
-                    console.print(f"      [yellow]⚠[/yellow] {len(warnings)} warning(s):")
+                    console.print(
+                        f"      [yellow]⚠[/yellow] {len(warnings)} warning(s):"
+                    )
                     for issue in warnings[:3]:  # Show first 3 warnings
                         console.print(f"        • {issue.message}")
                     if len(warnings) > 3:

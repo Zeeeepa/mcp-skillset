@@ -19,6 +19,7 @@ from ..server import (
     mcp,
 )
 
+
 logger = logging.getLogger(__name__)
 
 # Authorized users who can push directly to main
@@ -528,9 +529,7 @@ async def _git_commit_and_push(
             pr_url = pr_result.stdout.strip() if pr_result.returncode == 0 else None
 
             # Return to main
-            subprocess.run(
-                ["git", "checkout", "main"], cwd=cwd, capture_output=True
-            )
+            subprocess.run(["git", "checkout", "main"], cwd=cwd, capture_output=True)
 
             return {
                 "git_status": "pr_created",
