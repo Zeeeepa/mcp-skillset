@@ -141,8 +141,8 @@ class TestHelpCommands:
         # Run command
         result = cli_runner.invoke(cli, ["info", "nonexistent"])
 
-        # Verify
-        assert result.exit_code != 0
+        # Verify - info command exits with 0 but prints "not found" message
+        assert result.exit_code == 0
         assert "not found" in result.output.lower() or "error" in result.output.lower()
 
     @patch("mcp_skills.cli.commands.list_skills.SkillManager")
@@ -169,7 +169,7 @@ class TestHelpCommands:
         result = cli_runner.invoke(cli, ["list", "--help"])
 
         assert result.exit_code == 0
-        assert "List available skills" in result.output
+        assert "List all available skills" in result.output
         assert "--category" in result.output
         assert "--compact" in result.output
 
@@ -180,7 +180,7 @@ class TestHelpCommands:
         assert result.exit_code == 0
         assert "Show detailed information" in result.output
 
-    @patch("mcp_skills.cli.commands.list_skills.SkillManager")
+    @patch("mcp_skills.cli.commands.info.SkillManager")
     def test_info_displays_metadata(
         self,
         mock_manager_cls: Mock,

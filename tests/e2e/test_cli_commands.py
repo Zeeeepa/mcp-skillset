@@ -125,11 +125,11 @@ class TestCLISearchCommand:
         """Test search command returns results."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        # Mock the service initialization to use our configured services
-        from mcp_skills.cli import main
+        # Mock the service initialization in the search command module
+        from mcp_skills.cli.commands import search
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(search, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(search, "IndexingEngine", lambda **kwargs: indexing_engine)
 
         result = cli_runner.invoke(cli, ["search", "python testing", "--limit", "5"])
 
@@ -152,10 +152,10 @@ class TestCLISearchCommand:
         """Test search with category filter."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import search
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(search, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(search, "IndexingEngine", lambda **kwargs: indexing_engine)
 
         result = cli_runner.invoke(
             cli, ["search", "python", "--category", "testing", "--limit", "3"]
@@ -177,10 +177,10 @@ class TestCLISearchCommand:
         """
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import search
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(search, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(search, "IndexingEngine", lambda **kwargs: indexing_engine)
 
         result = cli_runner.invoke(
             cli, ["search", "nonexistent_query_xyz123", "--limit", "5"]
@@ -204,9 +204,9 @@ class TestCLIListCommand:
         """Test list command shows all skills."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import list_skills
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(list_skills, "SkillManager", lambda **kwargs: skill_manager)
 
         result = cli_runner.invoke(cli, ["list"])
 
@@ -225,9 +225,9 @@ class TestCLIListCommand:
         """Test list with category filter."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import list_skills
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(list_skills, "SkillManager", lambda **kwargs: skill_manager)
 
         result = cli_runner.invoke(cli, ["list", "--category", "testing"])
 
@@ -243,9 +243,9 @@ class TestCLIListCommand:
         """Test list in compact mode."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import list_skills
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(list_skills, "SkillManager", lambda **kwargs: skill_manager)
 
         result = cli_runner.invoke(cli, ["list", "--compact"])
 
@@ -267,9 +267,9 @@ class TestCLIInfoCommand:
         """Test info command for existing skill."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import info
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(info, "SkillManager", lambda **kwargs: skill_manager)
 
         # Get a real skill ID from our repository
         skills = skill_manager.discover_skills()
@@ -292,9 +292,9 @@ class TestCLIInfoCommand:
         """Test info command for non-existent skill."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import info
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(info, "SkillManager", lambda **kwargs: skill_manager)
 
         result = cli_runner.invoke(cli, ["info", "nonexistent-skill-id"])
 
@@ -316,15 +316,15 @@ class TestCLIRecommendCommand:
         """Test recommend command for Python project."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import recommend
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(recommend, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(recommend, "IndexingEngine", lambda **kwargs: indexing_engine)
 
         # Import ToolchainDetector directly to avoid recursion
         from mcp_skills.services.toolchain_detector import ToolchainDetector
 
-        monkeypatch.setattr(main, "ToolchainDetector", lambda: ToolchainDetector())
+        monkeypatch.setattr(recommend, "ToolchainDetector", lambda: ToolchainDetector())
 
         # Change to Python project directory
         monkeypatch.chdir(sample_python_project_e2e)
@@ -350,9 +350,9 @@ class TestCLIRepoCommands:
         """Test repo list with no repositories."""
         repo_manager, skill_manager, indexing_engine = e2e_configured_services
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import repo
 
-        monkeypatch.setattr(main, "RepositoryManager", lambda **kwargs: repo_manager)
+        monkeypatch.setattr(repo, "RepositoryManager", lambda **kwargs: repo_manager)
 
         result = cli_runner.invoke(cli, ["repo", "list"])
 
@@ -368,9 +368,9 @@ class TestCLIRepoCommands:
         """Test repo list with configured repositories."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import repo
 
-        monkeypatch.setattr(main, "RepositoryManager", lambda **kwargs: repo_manager)
+        monkeypatch.setattr(repo, "RepositoryManager", lambda **kwargs: repo_manager)
 
         result = cli_runner.invoke(cli, ["repo", "list"])
 
@@ -387,9 +387,9 @@ class TestCLIRepoCommands:
         """Test repo add with invalid URL."""
         repo_manager, skill_manager, indexing_engine = e2e_configured_services
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import repo
 
-        monkeypatch.setattr(main, "RepositoryManager", lambda **kwargs: repo_manager)
+        monkeypatch.setattr(repo, "RepositoryManager", lambda **kwargs: repo_manager)
 
         result = cli_runner.invoke(cli, ["repo", "add", "not-a-valid-url"])
 
@@ -410,10 +410,10 @@ class TestCLIIndexCommand:
         """Test index command builds indices."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import index
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(index, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(index, "IndexingEngine", lambda **kwargs: indexing_engine)
 
         result = cli_runner.invoke(cli, ["index"])
 
@@ -431,10 +431,10 @@ class TestCLIIndexCommand:
         """Test index --force rebuilds from scratch."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import index
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(index, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(index, "IndexingEngine", lambda **kwargs: indexing_engine)
 
         result = cli_runner.invoke(cli, ["index", "--force"])
 
@@ -455,11 +455,11 @@ class TestCLIDoctorCommand:
         """Test doctor command checks system status."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import doctor
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
-        monkeypatch.setattr(main, "RepositoryManager", lambda **kwargs: repo_manager)
+        monkeypatch.setattr(doctor, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(doctor, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(doctor, "RepositoryManager", lambda **kwargs: repo_manager)
 
         result = cli_runner.invoke(cli, ["doctor"])
 
@@ -483,11 +483,11 @@ class TestCLIStatsCommand:
         """Test stats command shows statistics."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import stats
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
-        monkeypatch.setattr(main, "RepositoryManager", lambda **kwargs: repo_manager)
+        monkeypatch.setattr(stats, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(stats, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(stats, "RepositoryManager", lambda **kwargs: repo_manager)
 
         result = cli_runner.invoke(cli, ["stats"])
 
@@ -509,11 +509,11 @@ class TestCLIConfigCommand:
         """Test config command displays configuration."""
         repo_manager, skill_manager, indexing_engine = e2e_services_with_repo
 
-        from mcp_skills.cli import main
+        from mcp_skills.cli.commands import config
 
-        monkeypatch.setattr(main, "SkillManager", lambda **kwargs: skill_manager)
-        monkeypatch.setattr(main, "IndexingEngine", lambda **kwargs: indexing_engine)
-        monkeypatch.setattr(main, "RepositoryManager", lambda **kwargs: repo_manager)
+        monkeypatch.setattr(config, "SkillManager", lambda **kwargs: skill_manager)
+        monkeypatch.setattr(config, "IndexingEngine", lambda **kwargs: indexing_engine)
+        monkeypatch.setattr(config, "RepositoryManager", lambda **kwargs: repo_manager)
 
         result = cli_runner.invoke(cli, ["config", "--show"])
 

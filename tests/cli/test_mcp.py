@@ -18,7 +18,7 @@ class TestMCPCommand:
         result = cli_runner.invoke(cli, ["mcp", "--help"])
 
         assert result.exit_code == 0
-        assert "Start the MCP server" in result.output
+        assert "Start MCP server" in result.output
         assert "--dev" in result.output
 
     @pytest.mark.skip(
@@ -74,19 +74,15 @@ class TestMCPCommand:
         assert "Starting MCP server" in result.output
         assert "dev" in result.output.lower() or "development" in result.output.lower()
 
-    @patch("mcp_skills.cli.commands.mcp_server.MCPSkillsServer")
-    @patch("mcp_skills.models.config.MCPSkillsConfig")
+    @patch("mcp_skills.mcp.server.configure_services")
     def test_mcp_server_initialization_error(
         self,
-        mock_config_cls: Mock,
-        mock_server_cls: Mock,
+        mock_configure: Mock,
         cli_runner: CliRunner,
-        mock_config,
     ) -> None:
         """Test mcp command handles server initialization errors."""
-        # Setup mocks
-        mock_config_cls.load.return_value = mock_config
-        mock_server_cls.side_effect = Exception("Server initialization failed")
+        # Setup mock to raise exception during service configuration
+        mock_configure.side_effect = Exception("Server initialization failed")
 
         # Run command
         result = cli_runner.invoke(cli, ["mcp"])
@@ -94,31 +90,44 @@ class TestMCPCommand:
         # Verify error handling
         assert result.exit_code != 0
 
-    @patch("mcp_skills.models.config.MCPSkillsConfig")
+    @patch("mcp_skills.mcp.server.main")
+    @patch("mcp_skills.mcp.server.configure_services")
     def test_mcp_config_load_error(
         self,
-        mock_config_cls: Mock,
+        mock_configure: Mock,
+        mock_main: Mock,
         cli_runner: CliRunner,
     ) -> None:
         """Test mcp command handles config loading errors."""
-        # Setup mock to raise exception
-        mock_config_cls.load.side_effect = Exception("Config load failed")
+        # Setup mock to raise exception during configuration
+        mock_configure.side_effect = Exception("Config load failed")
 
         # Run command
         result = cli_runner.invoke(cli, ["mcp"])
 
         # Verify error handling
         assert result.exit_code != 0
+        # main should not be called if configure fails
+        mock_main.assert_not_called()
 
+    @patch("mcp_skills.mcp.server.main")
+    @patch("mcp_skills.mcp.server.configure_services")
     def test_mcp_displays_startup_message(
         self,
+        mock_configure: Mock,
+        mock_main: Mock,
         cli_runner: CliRunner,
     ) -> None:
         """Test mcp command displays startup message."""
-        # Run command (will fail without proper setup, but should show message)
+        # Setup mocks to prevent actual server startup
+        mock_configure.return_value = None
+        mock_main.return_value = None
+
+        # Run command
         result = cli_runner.invoke(cli, ["mcp"])
 
-        # Verify startup message appears (even if server fails to start)
+        # Verify startup message appears
+        assert result.exit_code == 0
         assert "MCP" in result.output or "server" in result.output.lower()
 
     @pytest.mark.skip(reason="MCP server runs indefinitely")
@@ -145,28 +154,26 @@ class TestMCPCommand:
         # Verify graceful shutdown
         assert "Shutting down" in result.output or result.exit_code == 1
 
-    @patch("mcp_skills.cli.main.SkillManager")
-    @patch("mcp_skills.models.config.MCPSkillsConfig")
+    @patch("mcp_skills.mcp.server.main")
+    @patch("mcp_skills.mcp.server.configure_services")
     def test_mcp_verifies_skills_available(
         self,
-        mock_config_cls: Mock,
-        mock_manager_cls: Mock,
+        mock_configure: Mock,
+        mock_main: Mock,
         cli_runner: CliRunner,
-        mock_config,
     ) -> None:
         """Test mcp command verifies skills are available."""
-        # Setup mocks
-        mock_config_cls.load.return_value = mock_config
+        # Setup mocks to prevent actual server startup
+        mock_configure.return_value = None
+        mock_main.return_value = None
 
-        mock_manager = Mock()
-        mock_manager.discover_skills.return_value = []
-        mock_manager_cls.return_value = mock_manager
-
-        # Run command (should warn about no skills)
+        # Run command (should succeed even with no skills)
         result = cli_runner.invoke(cli, ["mcp"])
 
-        # Command may warn but shouldn't necessarily fail
-        assert result.exit_code in [0, 1]
+        # Command should succeed with mocked services
+        assert result.exit_code == 0
+        mock_configure.assert_called_once()
+        mock_main.assert_called_once()
 
 
 class TestMCPCommandIntegration:
