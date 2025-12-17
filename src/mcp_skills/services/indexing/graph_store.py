@@ -22,10 +22,12 @@ Alternatives Considered:
 2. SQLite with joins: Rejected due to poor graph traversal performance
 3. Undirected graph: Rejected to preserve dependency direction
 
-Extension Points: Can add graph persistence or Neo4j backend in future.
+Persistence: Graph is serialized to pickle file for cross-session retention.
 """
 
 import logging
+import pickle
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import networkx as nx
@@ -354,3 +356,74 @@ class GraphStore:
         except Exception as e:
             logger.error(f"Failed to get graph stats: {e}")
             return {"nodes": 0, "edges": 0}
+
+    def save(self, path: Path) -> bool:
+        """Save graph to pickle file.
+
+        Serializes the NetworkX graph to disk for persistence across sessions.
+
+        Args:
+            path: Path to save the pickle file
+
+        Returns:
+            True if save succeeded, False otherwise
+
+        Performance:
+        - Time: O(n + e) for serialization
+        - Space: ~1KB per 10 nodes typical
+        """
+        try:
+            # Ensure parent directory exists
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(path, "wb") as f:
+                pickle.dump(self.graph, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+            node_count = self.graph.number_of_nodes()
+            edge_count = self.graph.number_of_edges()
+            logger.info(
+                f"Saved knowledge graph to {path}: "
+                f"{node_count} nodes, {edge_count} edges"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to save graph to {path}: {e}")
+            return False
+
+    def load(self, path: Path) -> bool:
+        """Load graph from pickle file.
+
+        Deserializes a previously saved NetworkX graph from disk.
+
+        Args:
+            path: Path to the pickle file
+
+        Returns:
+            True if load succeeded, False if file doesn't exist or load failed
+
+        Performance:
+        - Time: O(n + e) for deserialization
+        - Expected: <100ms for 1000 skills
+        """
+        try:
+            if not path.exists():
+                logger.debug(f"No existing graph file at {path}")
+                return False
+
+            with open(path, "rb") as f:
+                self.graph = pickle.load(f)
+
+            node_count = self.graph.number_of_nodes()
+            edge_count = self.graph.number_of_edges()
+            logger.info(
+                f"Loaded knowledge graph from {path}: "
+                f"{node_count} nodes, {edge_count} edges"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to load graph from {path}: {e}")
+            # Reset to empty graph on load failure
+            self.graph = nx.DiGraph()
+            return False

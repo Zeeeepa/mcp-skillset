@@ -1,6 +1,7 @@
 """CLI commands for mcp-skillset."""
 
-from mcp_skills.cli.main import cli
+# Note: cli is exposed via entry point (mcp_skills.cli.main:cli),
+# not package import, to avoid runpy double-import warning when
+# running with `python -m mcp_skills.cli.main`
 
-
-__all__ = ["cli"]
+__all__: list[str] = []

@@ -131,10 +131,28 @@ class IndexingEngine:
         # Ensure storage directory exists
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
+        # Determine graph persistence path
+        if config and config.knowledge_graph.persist_path:
+            self._graph_path = config.knowledge_graph.persist_path
+        else:
+            self._graph_path = (
+                Path.home() / ".mcp-skillset" / "indices" / "knowledge_graph.pkl"
+            )
+
         # Initialize components
         try:
             self.vector_store = VectorStore(persist_directory=self.storage_path)
             self.graph_store = GraphStore()
+
+            # Try to load existing graph from disk
+            if self._graph_path.exists():
+                loaded = self.graph_store.load(self._graph_path)
+                if loaded:
+                    stats = self.graph_store.get_stats()
+                    logger.info(
+                        f"Loaded persisted knowledge graph: "
+                        f"{stats['nodes']} nodes, {stats['edges']} edges"
+                    )
 
             # Initialize HybridSearcher with weights from config if available
             if config:
@@ -292,11 +310,17 @@ class IndexingEngine:
         # Update last indexed timestamp
         self._last_indexed = datetime.now()
 
+        # 4. Save graph to disk for persistence
+        if self.graph_store.save(self._graph_path):
+            logger.info(f"Knowledge graph saved to {self._graph_path}")
+        else:
+            logger.warning("Failed to save knowledge graph to disk")
+
         logger.info(
             f"Reindexing complete: {indexed_count} indexed, {failed_count} failed"
         )
 
-        # 4. Return statistics
+        # 5. Return statistics
         return self.get_stats()
 
     def search(
