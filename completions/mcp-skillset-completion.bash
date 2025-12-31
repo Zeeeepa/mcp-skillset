@@ -27,4 +27,3 @@ _mcp_skillset_completion_setup() {
 }
 
 _mcp_skillset_completion_setup;
-

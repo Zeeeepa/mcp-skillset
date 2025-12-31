@@ -105,7 +105,7 @@ class AgentInstaller:
     def install(
         self,
         agent: DetectedAgent,
-        force: bool = False,
+        force: bool = False,  # noqa: ARG002 - kept for API compatibility, always uses force=True
         dry_run: bool = False,
     ) -> InstallResult:
         """Install MCP SkillSet for a detected agent.

@@ -15,4 +15,3 @@ function _mcp_skillset_completion;
 end;
 
 complete --no-files --command mcp-skillset --arguments "(_mcp_skillset_completion)";
-

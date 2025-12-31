@@ -12,7 +12,7 @@ from questionary import Choice
 from rich.console import Console
 from rich.tree import Tree
 
-from mcp_skills.models.config import HybridSearchConfig, HookConfig, MCPSkillsConfig
+from mcp_skills.models.config import HookConfig, HybridSearchConfig, MCPSkillsConfig
 from mcp_skills.services.indexing import IndexingEngine
 from mcp_skills.services.repository_manager import RepositoryManager
 from mcp_skills.services.skill_manager import SkillManager
@@ -463,14 +463,16 @@ class ConfigMenu:
         console.print("\n[bold]Hook Settings (Claude Code Integration)[/bold]\n")
 
         # Show current settings
-        hooks_config = getattr(self.config, 'hooks', None)
+        hooks_config = getattr(self.config, "hooks", None)
         if hooks_config:
-            console.print(f"Current settings:")
+            console.print("Current settings:")
             console.print(f"  • Enabled: [cyan]{hooks_config.enabled}[/cyan]")
             console.print(f"  • Threshold: [cyan]{hooks_config.threshold}[/cyan]")
             console.print(f"  • Max skills: [cyan]{hooks_config.max_skills}[/cyan]")
         else:
-            console.print("[dim]Using defaults (enabled, threshold=0.6, max_skills=5)[/dim]")
+            console.print(
+                "[dim]Using defaults (enabled, threshold=0.6, max_skills=5)[/dim]"
+            )
         console.print()
 
         action = questionary.select(
@@ -493,7 +495,7 @@ class ConfigMenu:
 
     def _toggle_hooks(self) -> None:
         """Toggle hook enabled/disabled state."""
-        hooks_config = getattr(self.config, 'hooks', None)
+        hooks_config = getattr(self.config, "hooks", None)
         current_enabled = hooks_config.enabled if hooks_config else True
 
         new_enabled = questionary.confirm(
@@ -507,7 +509,7 @@ class ConfigMenu:
         self._save_config({"hooks": {"enabled": new_enabled}})
 
         # Update in-memory config
-        if not hasattr(self.config, 'hooks') or self.config.hooks is None:
+        if not hasattr(self.config, "hooks") or self.config.hooks is None:
             self.config.hooks = HookConfig()
         self.config.hooks.enabled = new_enabled
 
@@ -516,7 +518,7 @@ class ConfigMenu:
 
     def _configure_hook_threshold(self) -> None:
         """Configure hook similarity threshold."""
-        hooks_config = getattr(self.config, 'hooks', None)
+        hooks_config = getattr(self.config, "hooks", None)
         current_threshold = hooks_config.threshold if hooks_config else 0.6
 
         console.print("\n[bold]Hook Threshold Configuration[/bold]")
@@ -537,7 +539,7 @@ class ConfigMenu:
         self._save_config({"hooks": {"threshold": threshold}})
 
         # Update in-memory config
-        if not hasattr(self.config, 'hooks') or self.config.hooks is None:
+        if not hasattr(self.config, "hooks") or self.config.hooks is None:
             self.config.hooks = HookConfig()
         self.config.hooks.threshold = threshold
 
@@ -545,7 +547,7 @@ class ConfigMenu:
 
     def _configure_hook_max_skills(self) -> None:
         """Configure maximum skills to suggest in hooks."""
-        hooks_config = getattr(self.config, 'hooks', None)
+        hooks_config = getattr(self.config, "hooks", None)
         current_max = hooks_config.max_skills if hooks_config else 5
 
         console.print("\n[bold]Max Skills Configuration[/bold]")
@@ -565,7 +567,7 @@ class ConfigMenu:
         self._save_config({"hooks": {"max_skills": max_skills}})
 
         # Update in-memory config
-        if not hasattr(self.config, 'hooks') or self.config.hooks is None:
+        if not hasattr(self.config, "hooks") or self.config.hooks is None:
             self.config.hooks = HookConfig()
         self.config.hooks.max_skills = max_skills
 
@@ -603,11 +605,15 @@ class ConfigMenu:
             if result.returncode == 0:
                 output = json.loads(result.stdout)
                 if output and "systemMessage" in output:
-                    console.print(f"\n[green]✓[/green] Hook response:")
+                    console.print("\n[green]✓[/green] Hook response:")
                     console.print(f"  [cyan]{output['systemMessage']}[/cyan]")
                 else:
-                    console.print("\n[yellow]No matching skills found for this prompt[/yellow]")
-                    console.print("[dim]Try a more specific prompt or lower the threshold[/dim]")
+                    console.print(
+                        "\n[yellow]No matching skills found for this prompt[/yellow]"
+                    )
+                    console.print(
+                        "[dim]Try a more specific prompt or lower the threshold[/dim]"
+                    )
             else:
                 console.print(f"\n[red]✗[/red] Hook failed: {result.stderr}")
 
@@ -615,7 +621,9 @@ class ConfigMenu:
             console.print("\n[red]✗[/red] Hook timed out (>10s)")
         except FileNotFoundError:
             console.print("\n[red]✗[/red] mcp-skillset command not found")
-            console.print("[dim]Make sure mcp-skillset is installed: pip install mcp-skillset[/dim]")
+            console.print(
+                "[dim]Make sure mcp-skillset is installed: pip install mcp-skillset[/dim]"
+            )
         except json.JSONDecodeError:
             console.print("\n[red]✗[/red] Invalid JSON response from hook")
         except Exception as e:
@@ -702,9 +710,13 @@ class ConfigMenu:
 
             # Hook settings
             hook_node = base_node.add("🪝 Hook Settings")
-            hooks_config = getattr(self.config, 'hooks', None)
+            hooks_config = getattr(self.config, "hooks", None)
             if hooks_config:
-                status = "[green]enabled[/green]" if hooks_config.enabled else "[red]disabled[/red]"
+                status = (
+                    "[green]enabled[/green]"
+                    if hooks_config.enabled
+                    else "[red]disabled[/red]"
+                )
                 hook_node.add(f"[green]✓[/green] Status: {status}")
                 hook_node.add(f"[green]✓[/green] Threshold: {hooks_config.threshold}")
                 hook_node.add(f"[green]✓[/green] Max skills: {hooks_config.max_skills}")

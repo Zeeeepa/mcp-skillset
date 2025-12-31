@@ -38,4 +38,3 @@ else
     # eval/source/. command, register function for later
     compdef _mcp_skillset_completion mcp-skillset
 fi
-

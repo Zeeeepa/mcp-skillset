@@ -44,7 +44,9 @@ def demo_toggle_hooks():
             print(f"\nBefore: enabled = {menu.config.hooks.enabled}")
 
             # Simulate disabling hooks
-            with patch("mcp_skills.cli.config_menu.questionary.confirm") as mock_confirm:
+            with patch(
+                "mcp_skills.cli.config_menu.questionary.confirm"
+            ) as mock_confirm:
                 mock_confirm.return_value.ask.return_value = False
                 menu._toggle_hooks()
 

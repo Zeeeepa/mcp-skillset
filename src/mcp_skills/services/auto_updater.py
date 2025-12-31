@@ -170,7 +170,9 @@ class AutoUpdater:
                     )
                 except Exception as e:
                     # Log error but don't raise - server should still start
-                    logger.error(f"Failed to reindex after auto-update: {e}", exc_info=True)
+                    logger.error(
+                        f"Failed to reindex after auto-update: {e}", exc_info=True
+                    )
             else:
                 logger.debug("Skill count unchanged, skipping reindex")
 

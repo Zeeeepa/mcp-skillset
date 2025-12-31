@@ -9,7 +9,6 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from mcp_skills.cli.shared.console import console
-from mcp_skills.models.config import MCPSkillsConfig
 from mcp_skills.services.skill_manager import SkillManager
 
 
@@ -51,9 +50,7 @@ def recent(days: int, since: str | None, limit: int) -> None:
             raise SystemExit(1)
     else:
         cutoff_date = datetime.now(tz=UTC) - timedelta(days=days)
-        console.print(
-            f"📅 [bold]Showing skills updated in last {days} days[/bold]"
-        )
+        console.print(f"📅 [bold]Showing skills updated in last {days} days[/bold]")
 
     console.print()
 

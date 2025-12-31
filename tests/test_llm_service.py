@@ -1,7 +1,5 @@
 """Unit tests for LLM service."""
 
-import os
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import httpx
@@ -61,17 +59,23 @@ class TestLLMService:
         service = LLMService(config)
         assert service.get_api_key() == "file-key"
 
-    def test_get_api_key_no_key(self, monkeypatch):
+    def test_get_api_key_no_key(self, monkeypatch, tmp_path):
         """Test API key retrieval when none configured."""
         # Clear environment
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        # Change to temp directory without .env file
+        monkeypatch.chdir(tmp_path)
 
         config = LLMConfig()  # No API key
         service = LLMService(config)
         assert service.get_api_key() is None
 
-    def test_ask_no_api_key(self):
+    def test_ask_no_api_key(self, monkeypatch, tmp_path):
         """Test ask raises error when no API key."""
+        # Clear environment and use clean temp directory
+        monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+        monkeypatch.chdir(tmp_path)
+
         config = LLMConfig()  # No API key
         service = LLMService(config)
 

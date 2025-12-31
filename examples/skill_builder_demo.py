@@ -12,6 +12,7 @@ Run this from the project root:
 import sys
 from pathlib import Path
 
+
 # Add src to path for standalone execution
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -206,7 +207,9 @@ def main():
     print("SKILLBUILDER SERVICE DEMONSTRATION")
     print("=" * 80)
     print("\nThis demo shows the SkillBuilder service for creating progressive skills.")
-    print("Skills follow the Claude Code format with YAML frontmatter and markdown body.")
+    print(
+        "Skills follow the Claude Code format with YAML frontmatter and markdown body."
+    )
 
     try:
         demo_list_templates()

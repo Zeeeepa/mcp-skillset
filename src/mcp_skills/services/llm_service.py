@@ -63,7 +63,7 @@ class LLMService:
                         line = line.strip()
                         if line.startswith("OPENROUTER_API_KEY="):
                             # Strip quotes and whitespace
-                            key = line.split("=", 1)[1].strip().strip('"\'')
+                            key = line.split("=", 1)[1].strip().strip("\"'")
                             if key:
                                 return key
                 except Exception:

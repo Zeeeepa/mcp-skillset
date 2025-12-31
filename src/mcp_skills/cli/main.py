@@ -39,8 +39,8 @@ from mcp_skills.cli.commands.info import info, show
 from mcp_skills.cli.commands.install import install
 from mcp_skills.cli.commands.list_skills import list_skills
 from mcp_skills.cli.commands.mcp_server import mcp
-from mcp_skills.cli.commands.recommend import recommend
 from mcp_skills.cli.commands.recent import recent
+from mcp_skills.cli.commands.recommend import recommend
 from mcp_skills.cli.commands.repo import repo
 from mcp_skills.cli.commands.search import search
 from mcp_skills.cli.commands.setup import setup

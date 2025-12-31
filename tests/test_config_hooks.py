@@ -4,11 +4,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 import yaml
 
 from mcp_skills.cli.config_menu import ConfigMenu
-from mcp_skills.models.config import HookConfig
 
 
 class TestHookConfiguration:
@@ -69,9 +67,18 @@ class TestHookConfiguration:
     def test_validate_max_skills_invalid(self):
         """Test max skills validation with invalid inputs."""
         # Out of range
-        assert ConfigMenu._validate_max_skills("0") == "Max skills must be between 1 and 10"
-        assert ConfigMenu._validate_max_skills("11") == "Max skills must be between 1 and 10"
-        assert ConfigMenu._validate_max_skills("-1") == "Max skills must be between 1 and 10"
+        assert (
+            ConfigMenu._validate_max_skills("0")
+            == "Max skills must be between 1 and 10"
+        )
+        assert (
+            ConfigMenu._validate_max_skills("11")
+            == "Max skills must be between 1 and 10"
+        )
+        assert (
+            ConfigMenu._validate_max_skills("-1")
+            == "Max skills must be between 1 and 10"
+        )
 
         # Invalid format
         assert ConfigMenu._validate_max_skills("abc") == "Please enter a valid integer"
@@ -180,9 +187,9 @@ class TestHookConfiguration:
         # Mock subprocess response
         mock_result = MagicMock()
         mock_result.returncode = 0
-        mock_result.stdout = json.dumps({
-            "systemMessage": "Relevant skill: toolchains-python-testing"
-        })
+        mock_result.stdout = json.dumps(
+            {"systemMessage": "Relevant skill: toolchains-python-testing"}
+        )
         mock_run.return_value = mock_result
 
         menu = ConfigMenu()
@@ -193,7 +200,9 @@ class TestHookConfiguration:
         # Verify subprocess was called correctly
         mock_run.assert_called_once()
         call_args = mock_run.call_args
-        assert call_args.kwargs["input"] == json.dumps({"user_prompt": "Write pytest tests"})
+        assert call_args.kwargs["input"] == json.dumps(
+            {"user_prompt": "Write pytest tests"}
+        )
         assert call_args.args[0] == ["mcp-skillset", "enrich-hook"]
 
     @patch("subprocess.run")
@@ -262,20 +271,12 @@ class TestHookConfiguration:
                 menu = ConfigMenu()
 
                 # Save initial hook config
-                menu._save_config({
-                    "hooks": {
-                        "enabled": False,
-                        "threshold": 0.8,
-                        "max_skills": 3
-                    }
-                })
+                menu._save_config(
+                    {"hooks": {"enabled": False, "threshold": 0.8, "max_skills": 3}}
+                )
 
                 # Update only threshold
-                menu._save_config({
-                    "hooks": {
-                        "threshold": 0.7
-                    }
-                })
+                menu._save_config({"hooks": {"threshold": 0.7}})
 
                 # Verify merge preserved other values
                 with open(config_path) as f:
@@ -287,7 +288,9 @@ class TestHookConfiguration:
 
     def test_hook_config_in_view_configuration(self):
         """Test that hook config appears in view configuration."""
+        import contextlib
         from io import StringIO
+
         from rich.console import Console
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -297,20 +300,20 @@ class TestHookConfiguration:
             output = StringIO()
             test_console = Console(file=output, width=80, force_terminal=True)
 
-            with patch.object(ConfigMenu, "CONFIG_PATH", config_path):
-                with patch("mcp_skills.cli.config_menu.console", test_console):
-                    with patch("mcp_skills.cli.config_menu.questionary.text") as mock_text:
-                        mock_text.return_value.ask.return_value = None
+            with (
+                patch.object(ConfigMenu, "CONFIG_PATH", config_path),
+                patch("mcp_skills.cli.config_menu.console", test_console),
+                patch("mcp_skills.cli.config_menu.questionary.text") as mock_text,
+            ):
+                mock_text.return_value.ask.return_value = None
 
-                        menu = ConfigMenu()
-                        menu.config.hooks.enabled = False
-                        menu.config.hooks.threshold = 0.75
-                        menu.config.hooks.max_skills = 7
+                menu = ConfigMenu()
+                menu.config.hooks.enabled = False
+                menu.config.hooks.threshold = 0.75
+                menu.config.hooks.max_skills = 7
 
-                        try:
-                            menu._view_configuration()
-                        except:
-                            pass  # Ignore errors from missing services
+                with contextlib.suppress(Exception):
+                    menu._view_configuration()
 
             # Check that hook settings appear in output
             result = output.getvalue()

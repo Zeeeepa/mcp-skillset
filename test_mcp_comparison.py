@@ -50,9 +50,9 @@ async def main():
     print(f"Status: {mcp_result['status']}")
     print(f"Count: {mcp_result['count']}")
     print(f"Search Method: {mcp_result['search_method']}")
-    if mcp_result['count'] > 0:
+    if mcp_result["count"] > 0:
         print("\nFirst result:")
-        skill = mcp_result['skills'][0]
+        skill = mcp_result["skills"][0]
         print(f"  Name: {skill['name']}")
         print(f"  ID: {skill['id']}")
         print(f"  Score: {skill['score']}")
@@ -108,9 +108,9 @@ async def main():
     print(f"Status: {mcp_rec['status']}")
     print(f"Recommendation Type: {mcp_rec['recommendation_type']}")
     print(f"Recommendations Count: {len(mcp_rec.get('recommendations', []))}")
-    if mcp_rec.get('recommendations'):
+    if mcp_rec.get("recommendations"):
         print("\nFirst recommendation:")
-        rec = mcp_rec['recommendations'][0]
+        rec = mcp_rec["recommendations"][0]
         print(f"  Name: {rec['name']}")
         print(f"  ID: {rec['id']}")
         print(f"  Confidence: {rec['confidence']}")
@@ -123,8 +123,8 @@ async def main():
 
     # First, get a skill ID from search
     search_result = await search_skills(query="pytest", limit=1)
-    if search_result['count'] > 0:
-        skill_id = search_result['skills'][0]['id']
+    if search_result["count"] > 0:
+        skill_id = search_result["skills"][0]["id"]
 
         # CLI version
         print(f"\n[CLI] Running: mcp-skillset info '{skill_id}'")
@@ -141,8 +141,8 @@ async def main():
         mcp_info = await get_skill(skill_id=skill_id)
         print("MCP Output:")
         print(f"Status: {mcp_info['status']}")
-        if mcp_info['status'] == 'completed':
-            skill = mcp_info['skill']
+        if mcp_info["status"] == "completed":
+            skill = mcp_info["skill"]
             print(f"Name: {skill['name']}")
             print(f"ID: {skill['id']}")
             print(f"Category: {skill['category']}")

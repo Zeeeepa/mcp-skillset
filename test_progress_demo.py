@@ -37,7 +37,9 @@ def main() -> None:
             }
         ]
 
-        console.print("[bold cyan]Testing repository clone with progress bar...[/bold cyan]\n")
+        console.print(
+            "[bold cyan]Testing repository clone with progress bar...[/bold cyan]\n"
+        )
 
         with Progress(
             SpinnerColumn(),
@@ -76,7 +78,9 @@ def main() -> None:
                         license=repo_config.get("license", "Unknown"),
                         progress_callback=make_callback(task_id),
                     )
-                    progress.update(task_id, description=f"✓ {repo_name}", completed=100)
+                    progress.update(
+                        task_id, description=f"✓ {repo_name}", completed=100
+                    )
                     console.print(f"\n[green]✓[/green] Successfully cloned {repo_name}")
                     console.print(f"  • ID: {new_repo.id}")
                     console.print(f"  • Skills: {new_repo.skill_count}")

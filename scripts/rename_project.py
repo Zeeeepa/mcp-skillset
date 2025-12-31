@@ -15,10 +15,8 @@ It handles different casing variations:
 - MCP SkillSet → MCP SkillSet
 """
 
-import os
-import re
 from pathlib import Path
-from typing import List, Tuple
+
 
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -89,7 +87,7 @@ def should_process_file(file_path: Path) -> bool:
     return False
 
 
-def process_file(file_path: Path, dry_run: bool = False) -> Tuple[bool, int]:
+def process_file(file_path: Path, dry_run: bool = False) -> tuple[bool, int]:
     """Process a single file, applying all replacements.
 
     Args:
@@ -100,7 +98,7 @@ def process_file(file_path: Path, dry_run: bool = False) -> Tuple[bool, int]:
         Tuple of (was_modified, num_replacements)
     """
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
     except (UnicodeDecodeError, PermissionError):
         # Skip binary files or files we can't read
@@ -126,7 +124,7 @@ def process_file(file_path: Path, dry_run: bool = False) -> Tuple[bool, int]:
     return False, 0
 
 
-def find_files_to_process() -> List[Path]:
+def find_files_to_process() -> list[Path]:
     """Find all files that should be processed.
 
     Returns:
@@ -176,15 +174,15 @@ def main():
             status = "Would modify" if args.dry_run else "Modified"
             print(f"{status}: {relative_path} ({num_replacements} replacements)")
 
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"   Files processed: {len(files)}")
     print(f"   Files modified: {len(modified_files)}")
     print(f"   Total replacements: {total_replacements}")
 
     if args.dry_run:
-        print(f"\n✅ Dry run complete. Run without --dry-run to apply changes.")
+        print("\n✅ Dry run complete. Run without --dry-run to apply changes.")
     else:
-        print(f"\n✅ Rename complete!")
+        print("\n✅ Rename complete!")
 
 
 if __name__ == "__main__":

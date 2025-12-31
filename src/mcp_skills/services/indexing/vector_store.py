@@ -167,7 +167,9 @@ class VectorStore:
                 "category": skill.category,
                 "tags": ",".join(skill.tags),  # Comma-separated for ChromaDB
                 "repo_id": skill.repo_id,
-                "updated_at": skill.updated_at.isoformat() if skill.updated_at else None,
+                "updated_at": skill.updated_at.isoformat()
+                if skill.updated_at
+                else None,
             }
 
             # Add to ChromaDB (embeddings generated automatically)
