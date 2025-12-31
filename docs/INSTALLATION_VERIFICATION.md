@@ -5,6 +5,8 @@
 **Problem**: Users running `pipx install mcp-skillset` get error "No apps associated with package mcp-skillset"
 **Resolution**: Package renamed from `mcp-skillset` to `mcp-skillset` on PyPI to match CLI command name
 
+**Update 2025-12-31**: Documentation updated to favor `uv` over `pip`/`pipx` as the recommended installation method.
+
 ## Root Cause Analysis
 
 ### The Problem
@@ -32,7 +34,8 @@ mcp-skillset = "mcp_skills.cli.main:cli"
 
 ### 2. Documentation Updates
 Updated `README.md` with:
-- **pipx as recommended installation method** (industry best practice for CLI tools)
+- **uv as recommended installation method** (fastest and most modern approach for Python tools)
+- **pipx as alternative** (reliable fallback for CLI tools)
 - **Consistent naming** - package name (`mcp-skillset`) now matches CLI command (`mcp-skillset`)
 - **Removed troubleshooting section** for package name mismatch (no longer needed)
 
@@ -72,17 +75,21 @@ Package name now matches CLI command name for user convenience.
 
 ## Verification Commands
 
-After installing with `pipx install mcp-skillset`, verify:
+After installing with `uv tool install mcp-skillset` (recommended) or `pipx install mcp-skillset`, verify:
 
 ```bash
-# Check pipx recognizes the package
+# Check uv tool list (if installed with uv)
+uv tool list | grep mcp-skillset
+# Expected: mcp-skillset v0.1.0
+
+# Or check pipx list (if installed with pipx)
 pipx list | grep mcp-skillset
 # Expected: package mcp-skillset 0.1.0, installed using Python 3.13.7
 #             - mcp-skillset
 
 # Check CLI command is available
 which mcp-skillset
-# Expected: /Users/masa/.local/bin/mcp-skillset (or similar path)
+# Expected: ~/.local/bin/mcp-skillset (or similar path)
 
 # Check version
 mcp-skillset --version
@@ -97,10 +104,12 @@ mcp-skillset --help
 
 All criteria met:
 
+- ✅ uv installation works without errors (`uv tool install mcp-skillset`) - **Recommended**
 - ✅ pipx installation works without errors (`pipx install mcp-skillset`)
-- ✅ CLI command `mcp-skillset` is available after pipx install
-- ✅ Documentation updated with correct instructions
-- ✅ Both pip and pipx methods documented and tested
+- ✅ pip installation works without errors (`pip install mcp-skillset`)
+- ✅ CLI command `mcp-skillset` is available after installation
+- ✅ Documentation updated with correct instructions (uv > pipx > pip)
+- ✅ All installation methods documented and tested
 - ✅ Package name now matches CLI command name for consistency
 
 ## Impact Analysis
@@ -111,9 +120,10 @@ All criteria met:
 - Error message not documented or explained
 
 ### After Fix
-- Clear documentation of correct installation: `pipx install mcp-skillset`
+- Clear documentation of correct installation: `uv tool install mcp-skillset` (recommended)
 - Package name matches CLI command name (no confusion)
-- pipx recommended as best practice (isolated environments, global CLI access)
+- uv recommended as best practice (fastest installation, modern tooling)
+- pipx documented as reliable alternative (isolated environments, global CLI access)
 - Simplified user experience with consistent naming
 
 ## Package Name Strategy Decision
@@ -129,10 +139,11 @@ All criteria met:
 
 ## Testing Matrix
 
-| Installation Method | Package Name | Result | CLI Available |
-|-------------------|--------------|---------|---------------|
-| pip install | mcp-skillset | ✅ Success | ✅ Yes |
-| pipx install | mcp-skillset | ✅ Success | ✅ Yes |
+| Installation Method | Package Name | Result | CLI Available | Speed |
+|-------------------|--------------|---------|---------------|-------|
+| uv tool install | mcp-skillset | ✅ Success | ✅ Yes | ⚡ Fastest |
+| pipx install | mcp-skillset | ✅ Success | ✅ Yes | 🐢 Moderate |
+| pip install | mcp-skillset | ✅ Success | ✅ Yes | 🐢 Moderate |
 
 ## Next Steps
 

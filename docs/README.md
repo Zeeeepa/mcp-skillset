@@ -106,10 +106,13 @@ Detailed research covering:
 
 ### Installing mcp-skillset
 ```bash
-# Recommended: Use pipx for CLI applications
+# Recommended: Use uv for fastest installation
+uv tool install mcp-skillset
+
+# Alternative: Use pipx
 pipx install mcp-skillset
 
-# Alternative: Use pip
+# Fallback: Use pip
 pip install mcp-skillset
 ```
 

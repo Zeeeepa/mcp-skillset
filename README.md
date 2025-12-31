@@ -67,17 +67,25 @@ brew tap bobmatnyc/tools
 brew install mcp-skillset
 ```
 
-### With pipx (Recommended for non-Homebrew)
+### With uv (Recommended - Fastest)
 
-[pipx](https://pipx.pypa.io/) is the recommended way to install Python CLI applications:
+[uv](https://github.com/astral-sh/uv) is the fastest way to install Python applications:
+
+```bash
+uv tool install mcp-skillset
+```
+
+### With pipx (Alternative)
+
+[pipx](https://pipx.pypa.io/) is a reliable alternative for installing Python CLI applications:
 
 ```bash
 pipx install mcp-skillset
 ```
 
-### With pip
+### With pip (Fallback)
 
-If you prefer pip (not recommended for CLI tools):
+Standard pip installation (not recommended for CLI tools):
 
 ```bash
 pip install mcp-skillset
@@ -88,7 +96,7 @@ pip install mcp-skillset
 ```bash
 git clone https://github.com/bobmatnyc/mcp-skillset.git
 cd mcp-skillset
-pip install -e .
+uv sync
 ```
 
 ### Local Development (Without Installation)
@@ -114,7 +122,7 @@ This is useful for:
 - Debugging with source code
 - Contributing to the project
 
-**Note**: For production use, install the package normally with `pip install -e .` or `pip install mcp-skillset`.
+**Note**: For production use, install the package normally with `uv tool install mcp-skillset` or `pipx install mcp-skillset`.
 
 ### First-Run Requirements
 
@@ -1106,8 +1114,12 @@ mcp-skillset repo --help
 
 **First-Time Setup Flow:**
 ```bash
-# 1. Install mcp-skillset
-pipx install mcp-skillset
+# 1. Install mcp-skillset (recommended - fastest)
+uv tool install mcp-skillset
+
+# Alternative installation methods:
+# pipx install mcp-skillset
+# pip install mcp-skillset
 
 # 2. Run setup wizard (includes agent installation)
 mcp-skillset setup
@@ -1345,12 +1357,18 @@ result = await skill_create(
 
 - Python 3.11+
 - Git
+- uv (recommended) or pip
 
 ### Setup Development Environment
 
 ```bash
 git clone https://github.com/bobmatnyc/mcp-skillset.git
 cd mcp-skillset
+
+# Recommended: Use uv for fastest setup
+uv sync
+
+# Alternative: Use pip
 pip install -e ".[dev]"
 ```
 
@@ -1391,6 +1409,13 @@ mcp-skillset search "testing"
 ### Run Tests
 
 ```bash
+# With uv (recommended)
+uv run pytest
+
+# With coverage
+uv run pytest --cov
+
+# Or use make
 make quality
 ```
 

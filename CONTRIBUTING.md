@@ -8,7 +8,7 @@ Thank you for your interest in contributing to mcp-skillset!
 
 - Python 3.11 or higher
 - Git
-- pip
+- uv (recommended) or pip
 
 ### Quick Start
 
@@ -17,11 +17,15 @@ Thank you for your interest in contributing to mcp-skillset!
 git clone https://github.com/yourusername/mcp-skillset.git
 cd mcp-skillset
 
-# Install in development mode with dev dependencies
+# Recommended: Install with uv (fastest)
+uv sync
+
+# Alternative: Install with pip
 pip install -e ".[dev]"
 
 # Verify installation
-python -m mcp_skills.cli.main --version
+uv run mcp-skillset --version
+# Or: python -m mcp_skills.cli.main --version
 ```
 
 ## Development Workflow
@@ -55,14 +59,20 @@ This runs:
 ### 3. Run Tests
 
 ```bash
-# Run all tests with coverage
-make test
+# Recommended: Run all tests with uv
+uv run pytest
+
+# With coverage
+uv run pytest --cov
 
 # Run specific test file
-pytest tests/test_toolchain_detector.py
+uv run pytest tests/test_toolchain_detector.py
 
 # Run with verbose output
-pytest tests/ -v
+uv run pytest tests/ -v
+
+# Or use make commands
+make test
 ```
 
 ## Code Quality Standards

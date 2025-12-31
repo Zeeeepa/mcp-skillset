@@ -17,7 +17,7 @@
 - **Hybrid RAG**: Vector similarity + KG relationships for better discovery
 - **Zero Config**: `mcp-skillset setup` handles everything automatically
 - **Multi-Source**: Pulls skills from multiple git repositories
-- **PyPI Installable**: `pip install mcp-skillset` in any codebase
+- **PyPI Installable**: `uv tool install mcp-skillset` or `pip install mcp-skillset` in any codebase
 
 ---
 
@@ -1209,7 +1209,13 @@ mcp-skillset doctor
 
 ### 1. Local Installation (Recommended for Solo Developers)
 ```bash
-pip install mcp-skillset
+# Recommended: Use uv for fastest installation
+uv tool install mcp-skillset
+
+# Alternative: Use pipx or pip
+# pipx install mcp-skillset
+# pip install mcp-skillset
+
 mcp-skillset setup
 mcp-skillset serve
 ```
@@ -1217,7 +1223,9 @@ mcp-skillset serve
 ### 2. Docker Container (Recommended for Teams)
 ```dockerfile
 FROM python:3.11-slim
-RUN pip install mcp-skillset
+# Use uv for faster builds
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+RUN uv pip install --system mcp-skillset
 EXPOSE 8000
 CMD ["mcp-skillset", "serve", "--transport", "http", "--port", "8000"]
 ```

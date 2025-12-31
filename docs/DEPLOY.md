@@ -38,8 +38,12 @@ This guide documents the complete automated release workflow for mcp-skillset, o
    # Python 3.11+ (matches project requirements)
    python --version  # Should be 3.11 or higher
 
-   # Build and publishing tools
-   pip install --upgrade build twine
+   # Recommended: Install uv for fastest development
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   # Or: pip install uv
+
+   # Build and publishing tools (uv handles these internally)
+   # If not using uv: pip install --upgrade build twine
    ```
 
 2. **Git & GitHub**:
