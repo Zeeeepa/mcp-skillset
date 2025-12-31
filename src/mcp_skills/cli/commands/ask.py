@@ -99,7 +99,7 @@ def ask(question: tuple[str, ...], no_context: bool, model: str | None) -> None:
             with console.status("[cyan]Searching relevant skills...[/cyan]"):
                 skill_manager = SkillManager()
                 indexing_engine = IndexingEngine(skill_manager=skill_manager)
-                results = indexing_engine.search(question_text, limit=3)
+                results = indexing_engine.search(question_text, top_k=3)
 
                 if results:
                     context_parts = []

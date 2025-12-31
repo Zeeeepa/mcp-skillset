@@ -375,6 +375,7 @@ class MCPSkillsConfig(BaseSettings):
         env_prefix = "MCP_SKILLS_"
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore unknown env vars like OPENROUTER_API_KEY
 
     def __init__(self, **kwargs):  # type: ignore
         """Initialize configuration with computed defaults.
