@@ -32,6 +32,7 @@ from mcp_skills.cli.commands.demo import demo
 from mcp_skills.cli.commands.discover import discover
 from mcp_skills.cli.commands.doctor import doctor, health
 from mcp_skills.cli.commands.enrich import enrich
+from mcp_skills.cli.commands.enrich_hook import enrich_hook
 from mcp_skills.cli.commands.index import index
 from mcp_skills.cli.commands.info import info, show
 from mcp_skills.cli.commands.install import install
@@ -71,6 +72,7 @@ cli.add_command(stats)
 cli.add_command(repo)
 cli.add_command(index)
 cli.add_command(enrich)
+cli.add_command(enrich_hook)
 cli.add_command(config)
 cli.add_command(build_skill)
 cli.add_command(discover)

@@ -227,6 +227,32 @@ class RepositoryConfig(BaseSettings):
     auto_update: bool = Field(True, description="Auto-update on startup")
 
 
+class HookConfig(BaseSettings):
+    """Hook enrichment configuration.
+
+    Configures the behavior of Claude Code hook enrichment.
+
+    Attributes:
+        enabled: Whether hook enrichment is enabled
+        threshold: Similarity threshold for skill matching (0.0-1.0)
+        max_skills: Maximum number of skills to suggest
+    """
+
+    enabled: bool = Field(True, description="Enable hook enrichment")
+    threshold: float = Field(
+        0.6,
+        ge=0.0,
+        le=1.0,
+        description="Similarity threshold for skill matching",
+    )
+    max_skills: int = Field(
+        5,
+        ge=1,
+        le=10,
+        description="Maximum skills to suggest in hints",
+    )
+
+
 class MCPSkillsConfig(BaseSettings):
     """Main mcp-skillset configuration.
 
@@ -276,6 +302,12 @@ class MCPSkillsConfig(BaseSettings):
         3600, description="Toolchain cache duration (seconds)", ge=0
     )
     auto_recommend: bool = Field(True, description="Auto-recommend skills on detection")
+
+    # Hook configuration
+    hooks: HookConfig = Field(
+        default_factory=HookConfig,
+        description="Claude Code hook enrichment config",
+    )
 
     class Config:
         """Pydantic configuration."""

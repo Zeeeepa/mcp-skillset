@@ -24,6 +24,7 @@ class TestInstallCommand:
         assert "--agent" in result.output
         assert "--dry-run" in result.output
         assert "--force" in result.output
+        assert "--with-hooks" in result.output
 
     @patch("mcp_skills.cli.commands.install.AgentInstaller")
     @patch("mcp_skills.cli.commands.install.AgentDetector")

@@ -2,17 +2,99 @@
 Install command implementation.
 """
 
+import json
 import logging
+from pathlib import Path
 
 import click
 from rich.console import Console
 
+from mcp_skills.hooks import HOOKS_TEMPLATE
 from mcp_skills.services.agent_detector import AgentDetector
 from mcp_skills.services.agent_installer import AgentInstaller
 
 
 console = Console()
 logger = logging.getLogger(__name__)
+
+
+def _install_hooks(dry_run: bool = False, force: bool = False) -> bool:
+    """Install Claude Code hooks for automatic skill hints.
+
+    Args:
+        dry_run: Preview changes without modifying files
+        force: Overwrite existing hook configuration
+
+    Returns:
+        True if hooks were installed, False otherwise
+    """
+    settings_path = Path.home() / ".claude" / "settings.json"
+
+    # Check if Claude Code settings exist
+    if not settings_path.parent.exists():
+        logger.info("Claude Code settings directory not found")
+        return False
+
+    # Load existing settings or create new
+    settings: dict = {}
+    if settings_path.exists():
+        try:
+            with open(settings_path) as f:
+                settings = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"Failed to read settings: {e}")
+            return False
+
+    # Check if hooks already configured
+    if "hooks" not in settings:
+        settings["hooks"] = {}
+
+    # Load hook template
+    try:
+        with open(HOOKS_TEMPLATE) as f:
+            hook_config = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"Failed to read hook template: {e}")
+        return False
+
+    # Check if UserPromptSubmit hook already has mcp-skillset
+    if not force and "UserPromptSubmit" in settings["hooks"]:
+        for matcher_block in settings["hooks"]["UserPromptSubmit"]:
+            if "hooks" in matcher_block:
+                for hook in matcher_block["hooks"]:
+                    if "mcp-skillset enrich-hook" in hook.get("command", ""):
+                        logger.info("mcp-skillset hook already configured")
+                        return False
+
+    # Merge hooks - append to existing UserPromptSubmit hooks
+    if "hooks" in hook_config:
+        for event, new_matchers in hook_config["hooks"].items():
+            if event not in settings["hooks"]:
+                # No existing hooks for this event, add as-is
+                settings["hooks"][event] = new_matchers
+            elif force:
+                # Force mode: replace all matchers for this event
+                settings["hooks"][event] = new_matchers
+            else:
+                # Append mode: add our matcher block to existing ones
+                for new_matcher in new_matchers:
+                    # Check if this exact matcher already exists
+                    if new_matcher not in settings["hooks"][event]:
+                        settings["hooks"][event].append(new_matcher)
+
+    if dry_run:
+        console.print(f"    [dim]Would write to: {settings_path}[/dim]")
+        return True
+
+    # Write updated settings
+    try:
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(settings_path, "w") as f:
+            json.dump(settings, f, indent=2)
+        return True
+    except OSError as e:
+        logger.warning(f"Failed to write settings: {e}")
+        return False
 
 
 @click.command()
@@ -44,7 +126,12 @@ logger = logging.getLogger(__name__)
     is_flag=True,
     help="Overwrite existing mcp-skillset configuration",
 )
-def install(agent: str, dry_run: bool, force: bool) -> None:
+@click.option(
+    "--with-hooks",
+    is_flag=True,
+    help="Install Claude Code hooks for automatic skill hints",
+)
+def install(agent: str, dry_run: bool, force: bool, with_hooks: bool) -> None:
     """Install MCP SkillSet for AI agents with auto-detection.
 
     Automatically detects installed AI agents and configures them to use mcp-skillset
@@ -165,6 +252,18 @@ def install(agent: str, dry_run: bool, force: bool) -> None:
             else:
                 console.print(f"  [red]✗[/red] {result.agent_name}: {result.error}")
 
+        # Install hooks if requested
+        if with_hooks:
+            console.print("\n[bold cyan]Installing Claude Code hooks...[/bold cyan]")
+            hook_result = _install_hooks(dry_run=dry_run, force=force)
+            if hook_result:
+                console.print("  [green]✓[/green] Hooks installed")
+            else:
+                console.print(
+                    "  [yellow]⚠[/yellow] Hook installation skipped "
+                    "(Claude Code not detected or already configured)"
+                )
+
         console.print()
 
         # Summary
@@ -188,7 +287,13 @@ def install(agent: str, dry_run: bool, force: bool) -> None:
             console.print("Next steps:")
             console.print("  1. Restart your AI agent to load the new configuration")
             console.print("  2. The agent will automatically connect to mcp-skillset")
-            console.print("  3. Skills will be available through MCP tools\n")
+            console.print("  3. Skills will be available through MCP tools")
+            if with_hooks:
+                console.print(
+                    "  4. Claude Code will automatically suggest relevant skills\n"
+                )
+            else:
+                console.print()
             console.print(
                 "[dim]Note: If using Claude Desktop, quit and restart the app completely.[/dim]"
             )
