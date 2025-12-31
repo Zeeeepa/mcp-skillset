@@ -1,6 +1,7 @@
 """Pydantic models for skill data validation."""
 
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -137,6 +138,7 @@ class Skill:
         repo_id: Repository this skill belongs to
         version: Optional version string
         author: Optional author information
+        updated_at: Timestamp when skill was last modified (from file mtime)
     """
 
     id: str
@@ -151,15 +153,18 @@ class Skill:
     repo_id: str
     version: str | None = None
     author: str | None = None
+    updated_at: datetime | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert Skill to dictionary for JSON serialization.
 
         Returns:
-            Dictionary with all fields, Path converted to string
+            Dictionary with all fields, Path converted to string, datetime to ISO
         """
         data = asdict(self)
         data["file_path"] = str(self.file_path)
+        if self.updated_at:
+            data["updated_at"] = self.updated_at.isoformat()
         return data
 
     @classmethod
@@ -172,6 +177,11 @@ class Skill:
         Returns:
             Skill instance
         """
+        # Parse updated_at from ISO string if present
+        updated_at = None
+        if "updated_at" in data and data["updated_at"]:
+            updated_at = datetime.fromisoformat(data["updated_at"])
+
         return cls(
             id=data["id"],
             name=data["name"],
@@ -185,4 +195,5 @@ class Skill:
             repo_id=data["repo_id"],
             version=data.get("version"),
             author=data.get("author"),
+            updated_at=updated_at,
         )

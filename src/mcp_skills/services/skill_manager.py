@@ -1,6 +1,7 @@
 """Skill lifecycle management - discovery, loading, execution."""
 
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -452,6 +453,10 @@ class SkillManager:
         - Developer Experience: Clear validation errors vs. runtime failures
         """
         try:
+            # Get file modification time before reading content
+            file_stat = file_path.stat()
+            updated_at = datetime.fromtimestamp(file_stat.st_mtime, tz=UTC)
+
             # Read file content
             content = file_path.read_text(encoding="utf-8")
 
@@ -514,6 +519,7 @@ class SkillManager:
                 repo_id=skill_model.repo_id,
                 version=skill_model.version,
                 author=skill_model.author,
+                updated_at=updated_at,
             )
 
         except (ValidationError, yaml.YAMLError, OSError) as e:
