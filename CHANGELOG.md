@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.9] - 2026-01-17
+
+### Fixed
+- Improved MCP tool discoverability for Claude Code's MCPSearch ([#4](https://github.com/bobmatnyc/mcp-skillset/issues/4))
+- Enhanced tool docstrings with semantic keywords (find, discover, search, get, retrieve, recommend, suggest)
+- MCP tools now more easily discoverable via keyword queries in MCPSearch
+- PR: [#5](https://github.com/bobmatnyc/mcp-skillset/pull/5)
+
+---
+
 ## [0.7.8] - 2026-01-01
 
 ### Fixed
