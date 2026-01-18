@@ -23,6 +23,10 @@ class SkillValidator:
     - Category validation
     - Format validation (skill IDs, paths)
     - Business rule validation
+    - agentskills.io specification compliance
+
+    Supports both mcp-skillset native format and agentskills.io specification
+    with backward-compatible metadata normalization.
     """
 
     # Predefined skill categories
@@ -39,6 +43,11 @@ class SkillValidator:
         "code-review",
         "collaboration",
     }
+
+    # agentskills.io specification limits
+    MAX_NAME_LENGTH = 64  # chars
+    MAX_DESCRIPTION_LENGTH = 1024  # chars
+    MAX_COMPATIBILITY_LENGTH = 500  # chars
 
     def validate_skill(self, skill: Skill) -> dict[str, list[str]]:
         """Check skill structure and dependencies.
@@ -68,6 +77,7 @@ class SkillValidator:
             - Missing tags
             - Missing examples in instructions
             - Unresolved dependencies (requires dependency_resolver callback)
+            - agentskills.io spec compliance (name format, length limits)
 
         Example:
             >>> validator = SkillValidator()
@@ -92,6 +102,37 @@ class SkillValidator:
         if not skill.instructions or len(skill.instructions.strip()) < 50:
             errors.append(
                 f"Instructions too short ({len(skill.instructions)} chars, minimum 50)"
+            )
+
+        # agentskills.io spec: Validate name format (warn only, don't break)
+        if skill.name and not re.match(r"^[a-z0-9-]+$", skill.name):
+            warnings.append(
+                f"Name '{skill.name}' doesn't follow agentskills.io spec format. "
+                "Use lowercase letters, numbers, and hyphens only (e.g., 'my-skill')"
+            )
+
+        # agentskills.io spec: Validate name length (warn only)
+        if skill.name and len(skill.name) > self.MAX_NAME_LENGTH:
+            warnings.append(
+                f"Name too long ({len(skill.name)} chars, "
+                f"agentskills.io spec recommends max {self.MAX_NAME_LENGTH} chars)"
+            )
+
+        # agentskills.io spec: Validate description length (warn only)
+        if skill.description and len(skill.description) > self.MAX_DESCRIPTION_LENGTH:
+            warnings.append(
+                f"Description too long ({len(skill.description)} chars, "
+                f"agentskills.io spec recommends max {self.MAX_DESCRIPTION_LENGTH} chars)"
+            )
+
+        # agentskills.io spec: Validate compatibility length (warn only)
+        if (
+            skill.compatibility
+            and len(skill.compatibility) > self.MAX_COMPATIBILITY_LENGTH
+        ):
+            warnings.append(
+                f"Compatibility field too long ({len(skill.compatibility)} chars, "
+                f"agentskills.io spec max {self.MAX_COMPATIBILITY_LENGTH} chars)"
             )
 
         # Validate category
@@ -265,3 +306,67 @@ class SkillValidator:
         examples.extend(code_blocks[:3])
 
         return examples
+
+    def normalize_frontmatter(self, frontmatter: dict) -> dict:
+        """Normalize frontmatter to support both mcp-skillset and agentskills.io formats.
+
+        Handles two format styles:
+        1. mcp-skillset native (flat): tags, version, author at top level
+        2. agentskills.io spec (nested): tags, version, author in metadata object
+
+        This method merges both formats, preserving all fields and ensuring
+        backward compatibility with existing skills.
+
+        Args:
+            frontmatter: Dictionary parsed from YAML frontmatter
+
+        Returns:
+            Normalized dictionary with all fields at top level
+
+        Example:
+            >>> # agentskills.io format
+            >>> frontmatter = {
+            ...     "name": "test-skill",
+            ...     "description": "Test description",
+            ...     "metadata": {"version": "1.0", "tags": ["test"]}
+            ... }
+            >>> normalized = validator.normalize_frontmatter(frontmatter)
+            >>> normalized["version"]
+            '1.0'
+            >>> normalized["tags"]
+            ['test']
+
+            >>> # mcp-skillset native format (no change needed)
+            >>> frontmatter = {
+            ...     "name": "test-skill",
+            ...     "description": "Test description",
+            ...     "version": "1.0",
+            ...     "tags": ["test"]
+            ... }
+            >>> normalized = validator.normalize_frontmatter(frontmatter)
+            >>> normalized["version"]
+            '1.0'
+        """
+        # Start with copy of original frontmatter
+        normalized = frontmatter.copy()
+
+        # If nested metadata object exists, flatten it
+        if "metadata" in frontmatter and isinstance(frontmatter["metadata"], dict):
+            nested_metadata = frontmatter["metadata"]
+
+            # Merge nested fields into top level (only if not already present)
+            for key, value in nested_metadata.items():
+                if key not in normalized:
+                    normalized[key] = value
+
+            # Remove the nested metadata object (we've flattened it)
+            normalized.pop("metadata", None)
+
+        # Ensure lists for array fields (agentskills.io may use strings)
+        if "tags" in normalized and isinstance(normalized["tags"], str):
+            normalized["tags"] = [normalized["tags"]]
+
+        if "dependencies" in normalized and isinstance(normalized["dependencies"], str):
+            normalized["dependencies"] = [normalized["dependencies"]]
+
+        return normalized

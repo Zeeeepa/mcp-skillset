@@ -18,6 +18,7 @@ mcp-skillset is a standalone Python application that provides intelligent, conte
 - **⚡ On-Demand Loading**: Skills loaded when needed, not all at startup
 - **🔌 MCP Native**: First-class Model Context Protocol integration
 - **🔒 Security First**: Multi-layer defense against prompt injection and malicious skills
+- **🌐 agentskills.io Compatible**: Supports both native and [agentskills.io](https://agentskills.io) specification formats
 
 ## Security
 
