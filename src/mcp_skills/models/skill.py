@@ -13,6 +13,10 @@ class SkillMetadataModel(BaseModel):
 
     Validates the structure of skill metadata extracted from
     SKILL.md frontmatter.
+
+    Supports both mcp-skillset native format and agentskills.io specification:
+    - Native: Flat structure with category, tags at top level
+    - agentskills.io: Nested metadata with license, compatibility, allowed_tools
     """
 
     name: str = Field(..., min_length=1, description="Skill name")
@@ -25,11 +29,25 @@ class SkillMetadataModel(BaseModel):
     version: str | None = Field(None, description="Skill version")
     author: str | None = Field(None, description="Skill author")
 
+    # agentskills.io specification fields (optional)
+    license: str | None = Field(None, description="License identifier (SPDX)")
+    compatibility: str | None = Field(
+        None, max_length=500, description="Compatibility requirements"
+    )
+    allowed_tools: str | None = Field(
+        None, description="Space-delimited list of allowed tools"
+    )
+    metadata: dict[str, Any] | None = Field(
+        None, description="Nested metadata object (agentskills.io spec)"
+    )
+
 
 class SkillModel(BaseModel):
     """Complete skill data model with validation.
 
     Validates full skill structure including metadata and instructions.
+
+    Supports both mcp-skillset native format and agentskills.io specification.
     """
 
     id: str = Field(..., min_length=1, description="Unique skill identifier")
@@ -48,6 +66,15 @@ class SkillModel(BaseModel):
     repo_id: str = Field(..., description="Repository identifier")
     version: str | None = Field(None, description="Skill version")
     author: str | None = Field(None, description="Skill author")
+
+    # agentskills.io specification fields (optional)
+    license: str | None = Field(None, description="License identifier (SPDX)")
+    compatibility: str | None = Field(
+        None, max_length=500, description="Compatibility requirements"
+    )
+    allowed_tools: str | None = Field(
+        None, description="Space-delimited list of allowed tools"
+    )
 
     class Config:
         """Pydantic configuration."""
@@ -74,6 +101,8 @@ class SkillModel(BaseModel):
 class SkillMetadata:
     """Skill metadata from YAML frontmatter.
 
+    Supports both mcp-skillset native format and agentskills.io specification.
+
     Attributes:
         name: Skill name
         description: Short description
@@ -82,6 +111,9 @@ class SkillMetadata:
         dependencies: List of skill IDs this skill depends on
         version: Optional version string
         author: Optional author information
+        license: Optional license identifier (SPDX format)
+        compatibility: Optional compatibility requirements (max 500 chars)
+        allowed_tools: Optional space-delimited list of allowed tools
     """
 
     name: str
@@ -91,6 +123,9 @@ class SkillMetadata:
     dependencies: list[str]
     version: str | None = None
     author: str | None = None
+    license: str | None = None
+    compatibility: str | None = None
+    allowed_tools: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert SkillMetadata to dictionary for JSON serialization.
@@ -118,12 +153,17 @@ class SkillMetadata:
             dependencies=data.get("dependencies", []),
             version=data.get("version"),
             author=data.get("author"),
+            license=data.get("license"),
+            compatibility=data.get("compatibility"),
+            allowed_tools=data.get("allowed_tools"),
         )
 
 
 @dataclass
 class Skill:
     """Complete skill data model.
+
+    Supports both mcp-skillset native format and agentskills.io specification.
 
     Attributes:
         id: Unique skill identifier
@@ -139,6 +179,9 @@ class Skill:
         version: Optional version string
         author: Optional author information
         updated_at: Timestamp when skill was last modified (from file mtime)
+        license: Optional license identifier (SPDX format, agentskills.io spec)
+        compatibility: Optional compatibility requirements (agentskills.io spec)
+        allowed_tools: Optional space-delimited list of allowed tools (agentskills.io spec)
     """
 
     id: str
@@ -154,6 +197,9 @@ class Skill:
     version: str | None = None
     author: str | None = None
     updated_at: datetime | None = None
+    license: str | None = None
+    compatibility: str | None = None
+    allowed_tools: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert Skill to dictionary for JSON serialization.
@@ -196,4 +242,7 @@ class Skill:
             version=data.get("version"),
             author=data.get("author"),
             updated_at=updated_at,
+            license=data.get("license"),
+            compatibility=data.get("compatibility"),
+            allowed_tools=data.get("allowed_tools"),
         )

@@ -473,6 +473,9 @@ class SkillManager:
                 logger.error(f"Invalid frontmatter format in {file_path}")
                 return None
 
+            # Normalize frontmatter to support both mcp-skillset and agentskills.io formats
+            metadata = self.validator.normalize_frontmatter(metadata)
+
             # Generate skill ID from file path
             # Format: {repo_id}/{skill_path}
             # Example: anthropics/testing/pytest/SKILL.md -> anthropics/testing/pytest
@@ -486,7 +489,7 @@ class SkillManager:
             # Extract examples from instructions (look for ## Examples section)
             examples = self._extract_examples(instructions)
 
-            # Build skill data for validation
+            # Build skill data for validation (includes agentskills.io spec fields)
             skill_data = {
                 "id": skill_id,
                 "name": metadata.get("name", ""),
@@ -500,12 +503,16 @@ class SkillManager:
                 "repo_id": repo_id,
                 "version": metadata.get("version"),
                 "author": metadata.get("author"),
+                # agentskills.io spec fields (optional)
+                "license": metadata.get("license"),
+                "compatibility": metadata.get("compatibility"),
+                "allowed_tools": metadata.get("allowed_tools"),
             }
 
             # Validate with Pydantic
             skill_model = SkillModel(**skill_data)
 
-            # Create Skill dataclass instance
+            # Create Skill dataclass instance (includes agentskills.io spec fields)
             return Skill(
                 id=skill_model.id,
                 name=skill_model.name,
@@ -520,6 +527,9 @@ class SkillManager:
                 version=skill_model.version,
                 author=skill_model.author,
                 updated_at=updated_at,
+                license=skill_model.license,
+                compatibility=skill_model.compatibility,
+                allowed_tools=skill_model.allowed_tools,
             )
 
         except (ValidationError, yaml.YAMLError, OSError) as e:

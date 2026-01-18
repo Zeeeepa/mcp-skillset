@@ -146,6 +146,7 @@ class SkillBuilder:
         tags: list[str] | None = None,
         template: str | None = None,
         deploy: bool = True,
+        spec_compliant: bool = False,
         **kwargs: Any,
     ) -> dict:
         """Build a skill from parameters or template.
@@ -161,6 +162,8 @@ class SkillBuilder:
             tags: Optional list of tags for discovery
             template: Optional template name (without .j2 extension)
             deploy: Whether to deploy to ~/.claude/skills/ (default: True)
+            spec_compliant: Generate agentskills.io spec-compliant output (default: False)
+                          When True, uses nested metadata format and validates spec limits
             **kwargs: Additional template variables
                 - version: Skill version (default: "1.0.0")
                 - category: Skill category
@@ -169,6 +172,8 @@ class SkillBuilder:
                 - related_skills: List of related skill names
                 - author: Skill author (default: "mcp-skillset")
                 - license: License identifier (default: "MIT")
+                - compatibility: Compatibility requirements (agentskills.io spec)
+                - allowed_tools: Space-delimited list of allowed tools (agentskills.io spec)
 
         Returns:
             dict with:
@@ -206,6 +211,7 @@ class SkillBuilder:
                 description=description,
                 domain=domain,
                 tags=tags or [],
+                spec_compliant=spec_compliant,
                 **kwargs,
             )
 
@@ -459,6 +465,7 @@ class SkillBuilder:
         description: str,
         domain: str,
         tags: list[str],
+        spec_compliant: bool = False,
         **kwargs: Any,
     ) -> dict:
         """Build context dictionary for template rendering.
@@ -469,6 +476,7 @@ class SkillBuilder:
             description: Skill description and activation context
             domain: Technology domain
             tags: List of tags
+            spec_compliant: Generate agentskills.io spec-compliant format
             **kwargs: Additional template variables
 
         Returns:
@@ -490,6 +498,10 @@ class SkillBuilder:
             "license": kwargs.get("license", "MIT"),
             "created": kwargs.get("created", datetime.now().strftime("%Y-%m-%d")),
             "last_updated": datetime.now().strftime("%Y-%m-%d"),
+            "spec_compliant": spec_compliant,
+            # agentskills.io spec fields
+            "compatibility": kwargs.get("compatibility"),
+            "allowed_tools": kwargs.get("allowed_tools"),
         }
 
         # Add any additional kwargs as template variables
