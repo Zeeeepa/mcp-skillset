@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-01-18
+
+### Changed
+- **Documentation Reorganization** ([#8](https://github.com/bobmatnyc/mcp-skillset/pull/8))
+  - Reorganized documentation structure for better navigation
+  - New directories: `user/`, `developer/`, `releases/`, `qa/`, `archive/`
+  - Moved 38 files to logical locations
+  - Added README index files for each section
+  - Root directory cleanup: 26 → 6 markdown files
+  - Improved discoverability of documentation by topic
+
+---
+
 ## [0.8.0] - 2026-01-18
 
 ### Added
