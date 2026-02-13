@@ -57,7 +57,7 @@ class CloneProgress(RemoteProgress):
             max_count: Total count (None for indeterminate progress)
             message: Progress message from git
         """
-        if max_count and self.callback:
+        if max_count is not None and self.callback is not None:
             self.callback(int(cur_count), int(max_count), message or "")
 
 
@@ -74,6 +74,32 @@ class RepositoryManager:
             "url": "https://github.com/anthropics/skills.git",
             "priority": 100,
             "license": "Apache-2.0",
+        },
+        # Vercel official skills repositories
+        {
+            "url": "https://github.com/vercel/ai.git",
+            "priority": 95,
+            "license": "Apache-2.0",
+        },
+        {
+            "url": "https://github.com/vercel/next.js.git",
+            "priority": 95,
+            "license": "MIT",
+        },
+        {
+            "url": "https://github.com/vercel/vercel.git",
+            "priority": 95,
+            "license": "Apache-2.0",
+        },
+        {
+            "url": "https://github.com/vercel/turborepo.git",
+            "priority": 95,
+            "license": "MIT",
+        },
+        {
+            "url": "https://github.com/vercel/examples.git",
+            "priority": 90,
+            "license": "MIT",
         },
         {
             "url": "https://github.com/obra/superpowers.git",
